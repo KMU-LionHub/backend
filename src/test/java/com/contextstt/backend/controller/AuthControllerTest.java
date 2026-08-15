@@ -1,10 +1,12 @@
 package com.contextstt.backend.controller;
 
 import static org.hamcrest.Matchers.notNullValue;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
+import com.jayway.jsonpath.JsonPath;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
@@ -12,6 +14,7 @@ import org.springframework.boot.webmvc.test.autoconfigure.AutoConfigureMockMvc;
 import org.springframework.http.MediaType;
 import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.web.servlet.MockMvc;
+import org.springframework.test.web.servlet.MvcResult;
 import tools.jackson.databind.ObjectMapper;
 
 @SpringBootTest
@@ -26,7 +29,7 @@ class AuthControllerTest {
     private ObjectMapper objectMapper;
 
     @Test
-    void signupThenLoginSucceeds() throws Exception {
+    void signupThenLoginAndAccessProtectedEndpointSucceeds() throws Exception {
         String signupPayload = objectMapper.writeValueAsString(
                 new SignupPayload("test@contextstt.com", "password1", "테스터")
         );
@@ -41,12 +44,23 @@ class AuthControllerTest {
                 new LoginPayload("test@contextstt.com", "password1")
         );
 
-        mockMvc.perform(post("/api/auth/login")
+        MvcResult loginResult = mockMvc.perform(post("/api/auth/login")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(loginPayload))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.token.accessToken").value(notNullValue()))
-                .andExpect(jsonPath("$.user.email").value("test@contextstt.com"));
+                .andExpect(jsonPath("$.user.email").value("test@contextstt.com"))
+                .andReturn();
+
+        String accessToken = JsonPath.read(
+                loginResult.getResponse().getContentAsString(),
+                "$.token.accessToken"
+        );
+
+        mockMvc.perform(get("/api/users/me")
+                        .header("Authorization", "Bearer " + accessToken))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.email").value("test@contextstt.com"));
     }
 
     @Test
@@ -67,6 +81,22 @@ class AuthControllerTest {
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(loginPayload))
                 .andExpect(status().isUnauthorized());
+    }
+
+    @Test
+    void protectedEndpointWithoutTokenReturnsUnauthorized() throws Exception {
+        mockMvc.perform(get("/api/users/me"))
+                .andExpect(status().isUnauthorized())
+                .andExpect(jsonPath("$.status").value(401))
+                .andExpect(jsonPath("$.message").value("인증이 필요합니다."));
+    }
+
+    @Test
+    void protectedEndpointWithInvalidTokenReturnsUnauthorized() throws Exception {
+        mockMvc.perform(get("/api/users/me")
+                        .header("Authorization", "Bearer invalid-token"))
+                .andExpect(status().isUnauthorized())
+                .andExpect(jsonPath("$.status").value(401));
     }
 
     private record SignupPayload(String email, String password, String nickname) {

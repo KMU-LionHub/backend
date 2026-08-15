@@ -6,6 +6,7 @@ import io.jsonwebtoken.Jwts;
 import io.jsonwebtoken.io.Decoders;
 import io.jsonwebtoken.security.Keys;
 import java.util.Date;
+import java.util.Optional;
 import javax.crypto.SecretKey;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Component;
@@ -40,23 +41,18 @@ public class JwtTokenProvider {
         return accessTokenValidityMs / 1000;
     }
 
-    public boolean validateToken(String token) {
+    public Optional<Long> extractUserId(String token) {
         try {
-            Jwts.parser().verifyWith(key).build().parseSignedClaims(token);
-            return true;
+            String subject = Jwts.parser().verifyWith(key).build()
+                    .parseSignedClaims(token)
+                    .getPayload()
+                    .getSubject();
+            return Optional.of(Long.valueOf(subject));
         } catch (ExpiredJwtException e) {
             log.debug("만료된 JWT 토큰입니다.");
         } catch (JwtException | IllegalArgumentException e) {
             log.debug("유효하지 않은 JWT 토큰입니다.");
         }
-        return false;
-    }
-
-    public Long getUserId(String token) {
-        String subject = Jwts.parser().verifyWith(key).build()
-                .parseSignedClaims(token)
-                .getPayload()
-                .getSubject();
-        return Long.valueOf(subject);
+        return Optional.empty();
     }
 }

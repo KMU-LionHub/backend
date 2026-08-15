@@ -3,7 +3,11 @@ package com.contextstt.backend.security;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
+import io.jsonwebtoken.Jwts;
 import io.jsonwebtoken.io.DecodingException;
+import io.jsonwebtoken.io.Decoders;
+import io.jsonwebtoken.security.Keys;
+import java.util.Date;
 import org.junit.jupiter.api.Test;
 
 class JwtTokenProviderTest {
@@ -17,8 +21,19 @@ class JwtTokenProviderTest {
 
         String token = provider.createAccessToken(1L, "test@contextstt.com");
 
-        assertThat(provider.validateToken(token)).isTrue();
-        assertThat(provider.getUserId(token)).isEqualTo(1L);
+        assertThat(provider.extractUserId(token)).contains(1L);
+    }
+
+    @Test
+    void rejectsSignedTokenWithNonNumericSubject() {
+        JwtTokenProvider provider = new JwtTokenProvider(new JwtProperties(BASE64_SECRET, 3_600_000));
+        String token = Jwts.builder()
+                .subject("not-a-number")
+                .expiration(new Date(System.currentTimeMillis() + 60_000))
+                .signWith(Keys.hmacShaKeyFor(Decoders.BASE64.decode(BASE64_SECRET)))
+                .compact();
+
+        assertThat(provider.extractUserId(token)).isEmpty();
     }
 
     @Test
