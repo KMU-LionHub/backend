@@ -34,9 +34,10 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
 
         String token = resolveToken(request);
 
-        if (StringUtils.hasText(token) && jwtTokenProvider.validateToken(token)) {
-            Long userId = jwtTokenProvider.getUserId(token);
-            userRepository.findById(userId).ifPresent(this::authenticate);
+        if (StringUtils.hasText(token)) {
+            jwtTokenProvider.extractUserId(token)
+                    .flatMap(userRepository::findById)
+                    .ifPresent(this::authenticate);
         }
 
         filterChain.doFilter(request, response);
@@ -51,7 +52,8 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
 
     private String resolveToken(HttpServletRequest request) {
         String bearerToken = request.getHeader(AUTHORIZATION_HEADER);
-        if (StringUtils.hasText(bearerToken) && bearerToken.startsWith(BEARER_PREFIX)) {
+        if (StringUtils.hasText(bearerToken)
+                && bearerToken.regionMatches(true, 0, BEARER_PREFIX, 0, BEARER_PREFIX.length())) {
             return bearerToken.substring(BEARER_PREFIX.length());
         }
         return null;

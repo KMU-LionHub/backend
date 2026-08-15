@@ -6,6 +6,7 @@ import io.jsonwebtoken.Jwts;
 import io.jsonwebtoken.io.Decoders;
 import io.jsonwebtoken.security.Keys;
 import java.util.Date;
+import java.util.Optional;
 import javax.crypto.SecretKey;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Component;
@@ -18,21 +19,9 @@ public class JwtTokenProvider {
     private final long accessTokenValidityMs;
 
     public JwtTokenProvider(JwtProperties jwtProperties) {
-        byte[] keyBytes = resolveKeyBytes(jwtProperties.secret());
+        byte[] keyBytes = Decoders.BASE64.decode(jwtProperties.secret());
         this.key = Keys.hmacShaKeyFor(keyBytes);
         this.accessTokenValidityMs = jwtProperties.accessTokenValidityMs();
-    }
-
-    private byte[] resolveKeyBytes(String secret) {
-        try {
-            byte[] decoded = Decoders.BASE64.decode(secret);
-            if (decoded.length >= 32) {
-                return decoded;
-            }
-        } catch (RuntimeException e) {
-            log.debug("JWT 시크릿이 Base64 형식이 아니어서 원문 바이트를 사용합니다.");
-        }
-        return secret.getBytes(java.nio.charset.StandardCharsets.UTF_8);
     }
 
     public String createAccessToken(Long userId, String email) {
@@ -52,23 +41,18 @@ public class JwtTokenProvider {
         return accessTokenValidityMs / 1000;
     }
 
-    public boolean validateToken(String token) {
+    public Optional<Long> extractUserId(String token) {
         try {
-            Jwts.parser().verifyWith(key).build().parseSignedClaims(token);
-            return true;
+            String subject = Jwts.parser().verifyWith(key).build()
+                    .parseSignedClaims(token)
+                    .getPayload()
+                    .getSubject();
+            return Optional.of(Long.valueOf(subject));
         } catch (ExpiredJwtException e) {
             log.debug("만료된 JWT 토큰입니다.");
         } catch (JwtException | IllegalArgumentException e) {
             log.debug("유효하지 않은 JWT 토큰입니다.");
         }
-        return false;
-    }
-
-    public Long getUserId(String token) {
-        String subject = Jwts.parser().verifyWith(key).build()
-                .parseSignedClaims(token)
-                .getPayload()
-                .getSubject();
-        return Long.valueOf(subject);
+        return Optional.empty();
     }
 }
