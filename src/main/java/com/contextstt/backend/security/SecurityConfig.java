@@ -1,5 +1,6 @@
 package com.contextstt.backend.security;
 
+import com.contextstt.backend.config.OpenApiProperties;
 import com.contextstt.backend.exception.ApiErrorResponseWriter;
 import lombok.RequiredArgsConstructor;
 import org.springframework.boot.context.properties.EnableConfigurationProperties;
@@ -15,7 +16,7 @@ import org.springframework.security.web.SecurityFilterChain;
 import org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter;
 
 @Configuration
-@EnableConfigurationProperties({JwtProperties.class, AuthRateLimitProperties.class})
+@EnableConfigurationProperties({JwtProperties.class, AuthRateLimitProperties.class, OpenApiProperties.class})
 @RequiredArgsConstructor
 public class SecurityConfig {
 
@@ -23,6 +24,7 @@ public class SecurityConfig {
     private final ApiSecurityExceptionHandler apiSecurityExceptionHandler;
     private final AuthRequestRateLimiter authRequestRateLimiter;
     private final ApiErrorResponseWriter apiErrorResponseWriter;
+    private final OpenApiProperties openApiProperties;
 
     @Bean
     public SecurityFilterChain filterChain(HttpSecurity http) throws Exception {
@@ -38,11 +40,13 @@ public class SecurityConfig {
                         .authenticationEntryPoint(apiSecurityExceptionHandler)
                         .accessDeniedHandler(apiSecurityExceptionHandler)
                 )
-                .authorizeHttpRequests(auth -> auth
-                        .requestMatchers(HttpMethod.POST, "/api/auth/signup", "/api/auth/login").permitAll()
-                        .requestMatchers("/swagger-ui/**", "/swagger-ui.html", "/v3/api-docs/**").permitAll()
-                        .anyRequest().authenticated()
-                )
+                .authorizeHttpRequests(auth -> {
+                    auth.requestMatchers(HttpMethod.POST, "/api/auth/signup", "/api/auth/login").permitAll();
+                    if (openApiProperties.enabled()) {
+                        auth.requestMatchers("/swagger-ui/**", "/swagger-ui.html", "/v3/api-docs/**").permitAll();
+                    }
+                    auth.anyRequest().authenticated();
+                })
                 .addFilterBefore(jwtAuthenticationFilter, UsernamePasswordAuthenticationFilter.class)
                 .addFilterBefore(authRateLimitFilter, JwtAuthenticationFilter.class);
 
