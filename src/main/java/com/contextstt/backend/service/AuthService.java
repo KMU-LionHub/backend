@@ -27,6 +27,10 @@ public class AuthService {
 
     @Transactional
     public UserResponse signup(SignupRequest request) {
+        if (userRepository.existsByEmail(request.email())) {
+            throw new DuplicateEmailException(request.email());
+        }
+
         User user = User.builder()
                 .email(request.email())
                 .password(passwordEncoder.encode(request.password()))

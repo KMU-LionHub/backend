@@ -2,6 +2,9 @@ package com.contextstt.backend.service;
 
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.Mockito.never;
+import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
 
 import com.contextstt.backend.domain.user.User;
@@ -33,6 +36,25 @@ class AuthServiceTest {
     private AuthService authService;
 
     @Test
+    void signupRejectsKnownEmailBeforeEncodingPassword() {
+        SignupRequest request = new SignupRequest(
+                "duplicate@contextstt.com",
+                "password1",
+                "테스터"
+        );
+
+        when(userRepository.existsByEmail(request.email())).thenReturn(true);
+
+        assertThatThrownBy(() -> authService.signup(request))
+                .isInstanceOf(DuplicateEmailException.class)
+                .hasMessage("이미 가입된 이메일입니다: duplicate@contextstt.com")
+                .hasNoCause();
+
+        verifyNoInteractions(passwordEncoder);
+        verify(userRepository, never()).saveAndFlush(any(User.class));
+    }
+
+    @Test
     void signupMapsDatabaseUniqueConstraintViolationToDuplicateEmail() {
         SignupRequest request = new SignupRequest(
                 "duplicate@contextstt.com",
@@ -42,6 +64,7 @@ class AuthServiceTest {
         DataIntegrityViolationException databaseException =
                 new DataIntegrityViolationException("unique email constraint");
 
+        when(userRepository.existsByEmail(request.email())).thenReturn(false);
         when(passwordEncoder.encode(request.password())).thenReturn("encoded-password");
         when(userRepository.saveAndFlush(any(User.class))).thenThrow(databaseException);
 
