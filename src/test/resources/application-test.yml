@@ -12,6 +12,10 @@ spring:
       hibernate:
         dialect: org.hibernate.dialect.H2Dialect
 
+app:
+  openapi:
+    enabled: true
+
 jwt:
   secret: Y29udGV4dC1zdHQtdGVzdC1vbmx5LWp3dC1zZWNyZXQta2V5LTMyLWJ5dGVz
   access-token-validity-ms: 3600000
