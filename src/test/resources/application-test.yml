@@ -15,3 +15,13 @@ spring:
 jwt:
   secret: Y29udGV4dC1zdHQtdGVzdC1vbmx5LWp3dC1zZWNyZXQta2V5LTMyLWJ5dGVz
   access-token-validity-ms: 3600000
+
+auth:
+  rate-limit:
+    maximum-tracked-keys: 20000
+    signup:
+      capacity: 10000
+      window: 1m
+    login:
+      capacity: 10000
+      window: 1m

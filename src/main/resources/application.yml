@@ -30,3 +30,13 @@ server:
 jwt:
   secret: ${JWT_SECRET}
   access-token-validity-ms: ${JWT_ACCESS_TOKEN_VALIDITY_MS:3600000}
+
+auth:
+  rate-limit:
+    maximum-tracked-keys: ${AUTH_RATE_LIMIT_MAXIMUM_TRACKED_KEYS:20000}
+    signup:
+      capacity: ${AUTH_RATE_LIMIT_SIGNUP_CAPACITY:5}
+      window: ${AUTH_RATE_LIMIT_SIGNUP_WINDOW:1m}
+    login:
+      capacity: ${AUTH_RATE_LIMIT_LOGIN_CAPACITY:10}
+      window: ${AUTH_RATE_LIMIT_LOGIN_WINDOW:1m}
