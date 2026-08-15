@@ -48,4 +48,12 @@ class RequestErrorHandlingTest {
                 .andExpect(jsonPath("$.status").value(415))
                 .andExpect(jsonPath("$.message").value("지원하지 않는 미디어 타입입니다."));
     }
+
+    @Test
+    void unknownPublicRouteReturnsNotFound() throws Exception {
+        mockMvc.perform(get("/api/auth/not-found"))
+                .andExpect(status().isNotFound())
+                .andExpect(jsonPath("$.status").value(404))
+                .andExpect(jsonPath("$.message").value("요청한 경로를 찾을 수 없습니다."));
+    }
 }

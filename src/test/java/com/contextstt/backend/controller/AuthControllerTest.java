@@ -61,6 +61,11 @@ class AuthControllerTest {
                         .header("Authorization", "Bearer " + accessToken))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.email").value("test@contextstt.com"));
+
+        mockMvc.perform(get("/api/users/me")
+                        .header("Authorization", "bearer " + accessToken))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.email").value("test@contextstt.com"));
     }
 
     @Test
@@ -81,6 +86,40 @@ class AuthControllerTest {
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(loginPayload))
                 .andExpect(status().isUnauthorized());
+    }
+
+    @Test
+    void duplicateSignupReturnsConflict() throws Exception {
+        String payload = objectMapper.writeValueAsString(
+                new SignupPayload("duplicate@contextstt.com", "password1", "중복가입")
+        );
+
+        mockMvc.perform(post("/api/auth/signup")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(payload))
+                .andExpect(status().isCreated());
+
+        mockMvc.perform(post("/api/auth/signup")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(payload))
+                .andExpect(status().isConflict())
+                .andExpect(jsonPath("$.status").value(409))
+                .andExpect(jsonPath("$.message")
+                        .value("이미 가입된 이메일입니다: duplicate@contextstt.com"));
+    }
+
+    @Test
+    void loginWithUnknownEmailReturnsGenericUnauthorizedResponse() throws Exception {
+        String payload = objectMapper.writeValueAsString(
+                new LoginPayload("unknown@contextstt.com", "password1")
+        );
+
+        mockMvc.perform(post("/api/auth/login")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(payload))
+                .andExpect(status().isUnauthorized())
+                .andExpect(jsonPath("$.status").value(401))
+                .andExpect(jsonPath("$.message").value("이메일 또는 비밀번호가 올바르지 않습니다."));
     }
 
     @Test
