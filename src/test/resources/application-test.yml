@@ -13,5 +13,5 @@ spring:
         dialect: org.hibernate.dialect.H2Dialect
 
 jwt:
-  secret: test-only-secret-key-for-jwt-signing-must-be-long-enough-1234567890
+  secret: Y29udGV4dC1zdHQtdGVzdC1vbmx5LWp3dC1zZWNyZXQta2V5LTMyLWJ5dGVz
   access-token-validity-ms: 3600000

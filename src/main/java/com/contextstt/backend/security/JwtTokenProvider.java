@@ -18,21 +18,9 @@ public class JwtTokenProvider {
     private final long accessTokenValidityMs;
 
     public JwtTokenProvider(JwtProperties jwtProperties) {
-        byte[] keyBytes = resolveKeyBytes(jwtProperties.secret());
+        byte[] keyBytes = Decoders.BASE64.decode(jwtProperties.secret());
         this.key = Keys.hmacShaKeyFor(keyBytes);
         this.accessTokenValidityMs = jwtProperties.accessTokenValidityMs();
-    }
-
-    private byte[] resolveKeyBytes(String secret) {
-        try {
-            byte[] decoded = Decoders.BASE64.decode(secret);
-            if (decoded.length >= 32) {
-                return decoded;
-            }
-        } catch (RuntimeException e) {
-            log.debug("JWT 시크릿이 Base64 형식이 아니어서 원문 바이트를 사용합니다.");
-        }
-        return secret.getBytes(java.nio.charset.StandardCharsets.UTF_8);
     }
 
     public String createAccessToken(Long userId, String email) {
