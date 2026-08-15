@@ -18,6 +18,7 @@ repositories {
 }
 
 dependencies {
+	implementation(libs.caffeine)
 	implementation(libs.spring.boot.starter.data.jpa)
 	implementation(libs.spring.boot.starter.flyway)
 	implementation(libs.spring.boot.starter.security)

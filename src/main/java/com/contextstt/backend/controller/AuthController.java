@@ -7,6 +7,7 @@ import com.contextstt.backend.dto.user.UserResponse;
 import com.contextstt.backend.exception.ErrorResponse;
 import com.contextstt.backend.service.AuthService;
 import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.headers.Header;
 import io.swagger.v3.oas.annotations.media.Content;
 import io.swagger.v3.oas.annotations.media.Schema;
 import io.swagger.v3.oas.annotations.responses.ApiResponse;
@@ -45,6 +46,16 @@ public class AuthController {
                     responseCode = "409",
                     description = "중복 이메일",
                     content = @Content(schema = @Schema(implementation = ErrorResponse.class))
+            ),
+            @ApiResponse(
+                    responseCode = "429",
+                    description = "요청 횟수 초과",
+                    headers = @Header(
+                            name = "Retry-After",
+                            description = "다시 요청할 수 있을 때까지 남은 초",
+                            schema = @Schema(type = "integer", format = "int64")
+                    ),
+                    content = @Content(schema = @Schema(implementation = ErrorResponse.class))
             )
     })
     @PostMapping("/signup")
@@ -68,6 +79,16 @@ public class AuthController {
             @ApiResponse(
                     responseCode = "401",
                     description = "인증 실패",
+                    content = @Content(schema = @Schema(implementation = ErrorResponse.class))
+            ),
+            @ApiResponse(
+                    responseCode = "429",
+                    description = "요청 횟수 초과",
+                    headers = @Header(
+                            name = "Retry-After",
+                            description = "다시 요청할 수 있을 때까지 남은 초",
+                            schema = @Schema(type = "integer", format = "int64")
+                    ),
                     content = @Content(schema = @Schema(implementation = ErrorResponse.class))
             )
     })

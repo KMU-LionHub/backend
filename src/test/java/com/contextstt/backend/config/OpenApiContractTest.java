@@ -37,10 +37,18 @@ class OpenApiContractTest {
                 .andExpect(jsonPath("$['paths']['/api/auth/signup']['post']['responses']['201']").exists())
                 .andExpect(jsonPath("$['paths']['/api/auth/signup']['post']['responses']['400']").exists())
                 .andExpect(jsonPath("$['paths']['/api/auth/signup']['post']['responses']['409']").exists())
+                .andExpect(jsonPath("$['paths']['/api/auth/signup']['post']['responses']['429']").exists())
+                .andExpect(jsonPath(
+                        "$['paths']['/api/auth/signup']['post']['responses']['429']['headers']['Retry-After']"
+                ).exists())
                 .andExpect(jsonPath("$['paths']['/api/auth/login']['post']['security']").doesNotExist())
                 .andExpect(jsonPath("$['paths']['/api/auth/login']['post']['responses']['200']").exists())
                 .andExpect(jsonPath("$['paths']['/api/auth/login']['post']['responses']['400']").exists())
-                .andExpect(jsonPath("$['paths']['/api/auth/login']['post']['responses']['401']").exists());
+                .andExpect(jsonPath("$['paths']['/api/auth/login']['post']['responses']['401']").exists())
+                .andExpect(jsonPath("$['paths']['/api/auth/login']['post']['responses']['429']").exists())
+                .andExpect(jsonPath(
+                        "$['paths']['/api/auth/login']['post']['responses']['429']['headers']['Retry-After']"
+                ).exists());
     }
 
     @Test
