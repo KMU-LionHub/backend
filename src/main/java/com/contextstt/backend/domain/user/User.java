@@ -44,7 +44,7 @@ public class User {
 
     @Builder
     private User(String email, String password, String nickname, UserRole role) {
-        this.email = email;
+        this.email = EmailNormalizer.normalize(email);
         this.password = password;
         this.nickname = nickname;
         this.role = role != null ? role : UserRole.USER;

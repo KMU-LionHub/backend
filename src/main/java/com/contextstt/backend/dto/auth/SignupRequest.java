@@ -1,5 +1,6 @@
 package com.contextstt.backend.dto.auth;
 
+import com.contextstt.backend.domain.user.EmailNormalizer;
 import io.swagger.v3.oas.annotations.media.Schema;
 import jakarta.validation.constraints.Email;
 import jakarta.validation.constraints.NotBlank;
@@ -9,7 +10,7 @@ import jakarta.validation.constraints.Size;
 @Schema(description = "회원가입 요청")
 public record SignupRequest(
 
-        @Schema(description = "이메일", example = "user@example.com")
+        @Schema(description = "이메일(주변 공백 제거 및 소문자 정규화)", example = "user@example.com")
         @NotBlank(message = "이메일은 필수입니다.")
         @Email(message = "이메일 형식이 올바르지 않습니다.")
         @Size(max = 100, message = "이메일은 100자 이하여야 합니다.")
@@ -35,4 +36,7 @@ public record SignupRequest(
         @Size(min = 2, max = 20, message = "닉네임은 2자 이상 20자 이하이어야 합니다.")
         String nickname
 ) {
+    public SignupRequest {
+        email = EmailNormalizer.normalize(email);
+    }
 }
