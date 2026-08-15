@@ -1,4 +1,4 @@
-FROM eclipse-temurin:21-jdk-jammy AS builder
+FROM eclipse-temurin:25-jdk-jammy AS builder
 
 WORKDIR /workspace
 
@@ -13,7 +13,7 @@ RUN ./gradlew bootJar --no-daemon \
 	&& find build/libs -maxdepth 1 -type f -name "*.jar" ! -name "*-plain.jar" \
 		-exec cp {} app.jar \;
 
-FROM eclipse-temurin:21-jre-jammy
+FROM eclipse-temurin:25-jre-jammy
 
 WORKDIR /app
 
