@@ -10,6 +10,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.boot.webmvc.test.autoconfigure.AutoConfigureMockMvc;
 import org.springframework.http.MediaType;
+import org.springframework.security.test.context.support.WithMockUser;
 import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.web.servlet.MockMvc;
 
@@ -32,6 +33,15 @@ class RequestErrorHandlingTest {
     }
 
     @Test
+    void unsupportedAuthMethodRequiresAuthentication() throws Exception {
+        mockMvc.perform(get("/api/auth/login"))
+                .andExpect(status().isUnauthorized())
+                .andExpect(jsonPath("$.status").value(401))
+                .andExpect(jsonPath("$.message").value("인증이 필요합니다."));
+    }
+
+    @Test
+    @WithMockUser
     void unsupportedMethodReturnsMethodNotAllowed() throws Exception {
         mockMvc.perform(get("/api/auth/login"))
                 .andExpect(status().isMethodNotAllowed())
@@ -50,7 +60,16 @@ class RequestErrorHandlingTest {
     }
 
     @Test
-    void unknownPublicRouteReturnsNotFound() throws Exception {
+    void unknownAuthRouteRequiresAuthentication() throws Exception {
+        mockMvc.perform(get("/api/auth/not-found"))
+                .andExpect(status().isUnauthorized())
+                .andExpect(jsonPath("$.status").value(401))
+                .andExpect(jsonPath("$.message").value("인증이 필요합니다."));
+    }
+
+    @Test
+    @WithMockUser
+    void authenticatedUnknownAuthRouteReturnsNotFound() throws Exception {
         mockMvc.perform(get("/api/auth/not-found"))
                 .andExpect(status().isNotFound())
                 .andExpect(jsonPath("$.status").value(404))
