@@ -109,6 +109,40 @@ class AuthControllerTest {
     }
 
     @Test
+    void emailIsNormalizedAcrossSignupLoginAndDuplicateCheck() throws Exception {
+        String signupPayload = objectMapper.writeValueAsString(
+                new SignupPayload("  Normalize.Me@Example.COM  ", "password1", "정규화")
+        );
+
+        mockMvc.perform(post("/api/auth/signup")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(signupPayload))
+                .andExpect(status().isCreated())
+                .andExpect(jsonPath("$.email").value("normalize.me@example.com"));
+
+        String loginPayload = objectMapper.writeValueAsString(
+                new LoginPayload("  NORMALIZE.ME@EXAMPLE.COM  ", "password1")
+        );
+
+        mockMvc.perform(post("/api/auth/login")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(loginPayload))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.user.email").value("normalize.me@example.com"));
+
+        String duplicatePayload = objectMapper.writeValueAsString(
+                new SignupPayload("normalize.me@example.com", "password1", "중복정규화")
+        );
+
+        mockMvc.perform(post("/api/auth/signup")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(duplicatePayload))
+                .andExpect(status().isConflict())
+                .andExpect(jsonPath("$.message")
+                        .value("이미 가입된 이메일입니다: normalize.me@example.com"));
+    }
+
+    @Test
     void loginWithUnknownEmailReturnsGenericUnauthorizedResponse() throws Exception {
         String payload = objectMapper.writeValueAsString(
                 new LoginPayload("unknown@contextstt.com", "password1")
