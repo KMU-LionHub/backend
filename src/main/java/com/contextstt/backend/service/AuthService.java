@@ -11,6 +11,7 @@ import com.contextstt.backend.exception.DuplicateEmailException;
 import com.contextstt.backend.exception.InvalidCredentialsException;
 import com.contextstt.backend.security.JwtTokenProvider;
 import lombok.RequiredArgsConstructor;
+import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -26,17 +27,17 @@ public class AuthService {
 
     @Transactional
     public UserResponse signup(SignupRequest request) {
-        if (userRepository.existsByEmail(request.email())) {
-            throw new DuplicateEmailException(request.email());
-        }
-
         User user = User.builder()
                 .email(request.email())
                 .password(passwordEncoder.encode(request.password()))
                 .nickname(request.nickname())
                 .build();
 
-        return UserResponse.from(userRepository.save(user));
+        try {
+            return UserResponse.from(userRepository.saveAndFlush(user));
+        } catch (DataIntegrityViolationException ex) {
+            throw new DuplicateEmailException(request.email(), ex);
+        }
     }
 
     public LoginResponse login(LoginRequest request) {
