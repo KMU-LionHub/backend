@@ -19,8 +19,8 @@ CREATE DATABASE context_stt CHARACTER SET utf8mb4;
 
 2. 환경 변수 설정
 
-| 변수 | 기본값 | 설명 |
-|---|---|---|
+| 변수 | 설명 |
+|---|---|
 | `DB_HOST` | MySQL 호스트 |
 | `DB_PORT` | MySQL 포트 |
 | `DB_NAME` | 데이터베이스명 |
