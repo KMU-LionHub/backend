@@ -45,6 +45,10 @@ updates:
       time: "09:00"
       timezone: Asia/Seoul
     open-pull-requests-limit: 5
+    ignore:
+      - dependency-name: eclipse-temurin
+        update-types:
+          - version-update:semver-major
     commit-message:
       prefix: build(deps)
 
@@ -56,5 +60,9 @@ updates:
       time: "09:00"
       timezone: Asia/Seoul
     open-pull-requests-limit: 5
+    ignore:
+      - dependency-name: mysql
+        update-types:
+          - version-update:semver-major
     commit-message:
       prefix: build(deps)
