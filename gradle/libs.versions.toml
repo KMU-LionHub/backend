@@ -5,6 +5,7 @@ spring-dependency-management = "1.1.7"
 springdoc = "3.0.3"
 
 [libraries]
+flyway-mysql = { module = "org.flywaydb:flyway-mysql" }
 h2 = { module = "com.h2database:h2" }
 jjwt-api = { module = "io.jsonwebtoken:jjwt-api", version.ref = "jjwt" }
 jjwt-impl = { module = "io.jsonwebtoken:jjwt-impl", version.ref = "jjwt" }
@@ -14,6 +15,7 @@ lombok = { module = "org.projectlombok:lombok" }
 mysql-connector = { module = "com.mysql:mysql-connector-j" }
 spring-boot-starter-data-jpa = { module = "org.springframework.boot:spring-boot-starter-data-jpa" }
 spring-boot-starter-data-jpa-test = { module = "org.springframework.boot:spring-boot-starter-data-jpa-test" }
+spring-boot-starter-flyway = { module = "org.springframework.boot:spring-boot-starter-flyway" }
 spring-boot-starter-security = { module = "org.springframework.boot:spring-boot-starter-security" }
 spring-boot-starter-security-test = { module = "org.springframework.boot:spring-boot-starter-security-test" }
 spring-boot-starter-validation = { module = "org.springframework.boot:spring-boot-starter-validation" }

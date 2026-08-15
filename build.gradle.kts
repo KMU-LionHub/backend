@@ -19,10 +19,12 @@ repositories {
 
 dependencies {
 	implementation(libs.spring.boot.starter.data.jpa)
+	implementation(libs.spring.boot.starter.flyway)
 	implementation(libs.spring.boot.starter.security)
 	implementation(libs.spring.boot.starter.validation)
 	implementation(libs.spring.boot.starter.webmvc)
 	compileOnly(libs.lombok)
+	runtimeOnly(libs.flyway.mysql)
 	runtimeOnly(libs.mysql.connector)
 	annotationProcessor(libs.lombok)
 
