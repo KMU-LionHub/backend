@@ -1,10 +1,13 @@
 package com.contextstt.backend.domain.transcription;
 
 import com.contextstt.backend.domain.user.User;
+import com.contextstt.backend.exception.ResourceConflictException;
 import com.contextstt.backend.exception.TranscriptWordNotFoundException;
 import jakarta.persistence.CascadeType;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
+import jakarta.persistence.EnumType;
+import jakarta.persistence.Enumerated;
 import jakarta.persistence.FetchType;
 import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.GenerationType;
@@ -61,6 +64,12 @@ public class Transcription {
     private String currentText;
 
     private Float confidence;
+
+    @Enumerated(EnumType.STRING)
+    @Column(nullable = false, length = 20)
+    private TranscriptionStatus status = TranscriptionStatus.DRAFT;
+
+    private LocalDateTime confirmedAt;
 
     @Column(length = 100)
     private String audioContentType;
@@ -124,6 +133,13 @@ public class Transcription {
     }
 
     public void correctWord(Long wordId, String text) {
+        if (status == TranscriptionStatus.CONFIRMED) {
+            throw new ResourceConflictException("확정된 전사는 수정할 수 없습니다.");
+        }
+        if (status == TranscriptionStatus.SUPERSEDED) {
+            throw new ResourceConflictException("재발언으로 대체된 전사는 수정할 수 없습니다.");
+        }
+
         TranscriptWord word = words.stream()
                 .filter(candidate -> candidate.getId().equals(wordId))
                 .findFirst()
@@ -133,6 +149,48 @@ public class Transcription {
         currentText = words.stream()
                 .map(TranscriptWord::getCurrentText)
                 .collect(Collectors.joining(" "));
+    }
+
+    public void confirm() {
+        if (status == TranscriptionStatus.CONFIRMED) {
+            return;
+        }
+        if (status == TranscriptionStatus.SUPERSEDED) {
+            throw new ResourceConflictException("재발언으로 대체된 전사는 확정할 수 없습니다.");
+        }
+        status = TranscriptionStatus.CONFIRMED;
+        confirmedAt = LocalDateTime.now();
+    }
+
+    public void markSuperseded() {
+        if (status != TranscriptionStatus.DRAFT) {
+            throw new ResourceConflictException("확정되거나 대체된 전사는 교체할 수 없습니다.");
+        }
+        status = TranscriptionStatus.SUPERSEDED;
+    }
+
+    public void ensureAttachable() {
+        if (status == TranscriptionStatus.SUPERSEDED) {
+            throw new ResourceConflictException("재발언으로 대체된 전사는 대화에 연결할 수 없습니다.");
+        }
+        if (replacesTranscription != null) {
+            throw new ResourceConflictException(
+                    "재발언 전사는 새 발언으로 연결할 수 없습니다. 기존 발언 교체 API를 사용해 주세요."
+            );
+        }
+    }
+
+    public void ensureRerecordable() {
+        if (status == TranscriptionStatus.CONFIRMED) {
+            throw new ResourceConflictException("확정된 전사는 다시 녹음할 수 없습니다.");
+        }
+        if (status == TranscriptionStatus.SUPERSEDED) {
+            throw new ResourceConflictException("재발언으로 대체된 전사는 다시 녹음할 수 없습니다.");
+        }
+    }
+
+    public boolean isReplacementOf(Long transcriptionId) {
+        return replacesTranscription != null && replacesTranscription.getId().equals(transcriptionId);
     }
 
     public Optional<Long> getReplacesTranscriptionId() {
