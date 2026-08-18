@@ -138,4 +138,30 @@ class OpenApiContractTest {
                         "$['paths']['/api/conversations/{conversationId}/close']['post']"
                 ).exists());
     }
+
+    @Test
+    void contextAnalysisOperationsRequireAuthenticationAndExposeSelectionFlow() throws Exception {
+        mockMvc.perform(get("/v3/api-docs"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath(
+                        "$['paths']['/api/context-analyses']['post']['security'][0].bearerAuth"
+                ).isArray())
+                .andExpect(jsonPath(
+                        "$['paths']['/api/context-analyses']['post']['responses']['201']"
+                ).exists())
+                .andExpect(jsonPath(
+                        "$['paths']['/api/context-analyses']['post']['responses']['502']"
+                ).exists())
+                .andExpect(jsonPath(
+                        "$['paths']['/api/context-analyses']['post']['responses']['503']"
+                ).exists())
+                .andExpect(jsonPath("$['paths']['/api/context-analyses']['get']").exists())
+                .andExpect(jsonPath("$['paths']['/api/context-analyses/{analysisId}']['get']").exists())
+                .andExpect(jsonPath(
+                        "$['paths']['/api/context-analyses/{analysisId}/selection']['put']"
+                ).exists())
+                .andExpect(jsonPath(
+                        "$['paths']['/api/context-analyses/{analysisId}/selection']['patch']"
+                ).exists());
+    }
 }
