@@ -82,6 +82,18 @@ public class GlobalExceptionHandler {
         return errorResponse(HttpStatus.SERVICE_UNAVAILABLE, ex.getMessage());
     }
 
+    @ExceptionHandler(AnalysisProviderUnavailableException.class)
+    public ResponseEntity<ErrorResponse> handleAnalysisProviderUnavailable(AnalysisProviderUnavailableException ex) {
+        log.warn("Analysis provider unavailable", ex);
+        return errorResponse(HttpStatus.SERVICE_UNAVAILABLE, ex.getMessage());
+    }
+
+    @ExceptionHandler(InvalidAnalysisResultException.class)
+    public ResponseEntity<ErrorResponse> handleInvalidAnalysisResult(InvalidAnalysisResultException ex) {
+        log.error("Analysis provider returned an invalid result", ex);
+        return errorResponse(HttpStatus.BAD_GATEWAY, ex.getMessage());
+    }
+
     @ExceptionHandler(ObjectOptimisticLockingFailureException.class)
     public ResponseEntity<ErrorResponse> handleOptimisticLock(ObjectOptimisticLockingFailureException ex) {
         return errorResponse(HttpStatus.CONFLICT, "다른 요청에서 전사 기록을 수정했습니다. 다시 시도해 주세요.");

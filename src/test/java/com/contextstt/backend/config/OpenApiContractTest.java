@@ -138,4 +138,36 @@ class OpenApiContractTest {
                         "$['paths']['/api/conversations/{conversationId}/close']['post']"
                 ).exists());
     }
+
+    @Test
+    void contextAnalysisOperationsRequireAuthenticationAndExposeSelectionFlow() throws Exception {
+        mockMvc.perform(get("/v3/api-docs"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath(
+                        "$['paths']['/api/context-analyses']['post']['security'][0].bearerAuth"
+                ).isArray())
+                .andExpect(jsonPath(
+                        "$['paths']['/api/context-analyses']['post']['responses']['201']"
+                ).exists())
+                .andExpect(jsonPath(
+                        "$['paths']['/api/context-analyses']['post']['responses']['502']"
+                ).exists())
+                .andExpect(jsonPath(
+                        "$['paths']['/api/context-analyses']['post']['responses']['503']"
+                ).exists())
+                .andExpect(jsonPath("$.components.schemas.CreateContextAnalysisRequest.properties.model.enum[0]")
+                        .value("CLAUDE_SONNET_5"))
+                .andExpect(jsonPath("$.components.schemas.CreateContextAnalysisRequest.properties.model.enum[1]")
+                        .value("GEMINI_3_7_FLASH"))
+                .andExpect(jsonPath("$.components.schemas.CreateContextAnalysisRequest.properties.model.enum[2]")
+                        .value("DEEPSEEK_V4_FLASH"))
+                .andExpect(jsonPath("$['paths']['/api/context-analyses']['get']").exists())
+                .andExpect(jsonPath("$['paths']['/api/context-analyses/{analysisId}']['get']").exists())
+                .andExpect(jsonPath(
+                        "$['paths']['/api/context-analyses/{analysisId}/selection']['put']"
+                ).exists())
+                .andExpect(jsonPath(
+                        "$['paths']['/api/context-analyses/{analysisId}/selection']['patch']"
+                ).exists());
+    }
 }
