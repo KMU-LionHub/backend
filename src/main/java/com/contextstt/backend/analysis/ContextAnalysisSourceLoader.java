@@ -3,6 +3,8 @@ package com.contextstt.backend.analysis;
 import com.contextstt.backend.analysis.ContextAnalysisInput.AnalysisParticipant;
 import com.contextstt.backend.analysis.ContextAnalysisInput.AnalysisWord;
 import com.contextstt.backend.analysis.ContextAnalysisInput.PreviousUtterance;
+import com.contextstt.backend.analysis.guardrail.PreviousUtteranceWindowLimiter;
+import com.contextstt.backend.analysis.guardrail.PreviousUtteranceWindowLimiter.PreviousUtteranceWindow;
 import com.contextstt.backend.domain.conversation.Conversation;
 import com.contextstt.backend.domain.conversation.ConversationRepository;
 import com.contextstt.backend.domain.conversation.ConversationUtterance;
@@ -21,6 +23,7 @@ import org.springframework.transaction.annotation.Transactional;
 public class ContextAnalysisSourceLoader {
 
     private final ConversationRepository conversationRepository;
+    private final PreviousUtteranceWindowLimiter windowLimiter;
 
     @Transactional(readOnly = true)
     public ContextAnalysisSource load(Long ownerId, Long conversationId, Long utteranceId) {
@@ -44,7 +47,7 @@ public class ContextAnalysisSourceLoader {
                 ))
                 .toList();
 
-        List<PreviousUtterance> previousUtterances = conversation.getUtterances().stream()
+        List<PreviousUtterance> allPreviousUtterances = conversation.getUtterances().stream()
                 .filter(utterance -> utterance.getUtteranceOrder() < target.getUtteranceOrder())
                 .filter(utterance -> utterance.getTranscription().getStatus() == TranscriptionStatus.CONFIRMED)
                 .map(utterance -> new PreviousUtterance(
@@ -53,13 +56,15 @@ public class ContextAnalysisSourceLoader {
                         utterance.getTranscription().getCurrentText()
                 ))
                 .toList();
+        PreviousUtteranceWindow previousWindow = windowLimiter.limit(allPreviousUtterances);
 
         ContextAnalysisInput input = new ContextAnalysisInput(
                 conversation.getId(),
                 target.getId(),
                 conversation.getContext(),
                 participants,
-                previousUtterances,
+                previousWindow.utterances(),
+                previousWindow.omittedCount(),
                 target.getSpeaker().getDisplayName(),
                 transcription.getOriginalText(),
                 transcription.getCurrentText(),

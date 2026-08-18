@@ -155,6 +155,13 @@ class OpenApiContractTest {
                 .andExpect(jsonPath(
                         "$['paths']['/api/context-analyses']['post']['responses']['503']"
                 ).exists())
+                .andExpect(jsonPath(
+                        "$['paths']['/api/context-analyses']['post']['responses']['429']"
+                ).exists())
+                .andExpect(jsonPath(
+                        "$['paths']['/api/context-analyses']['post']['responses']['429']"
+                                + "['headers']['Retry-After']"
+                ).exists())
                 .andExpect(jsonPath("$.components.schemas.CreateContextAnalysisRequest.properties.model.enum[0]")
                         .value("CLAUDE_SONNET_5"))
                 .andExpect(jsonPath("$.components.schemas.CreateContextAnalysisRequest.properties.model.enum[1]")

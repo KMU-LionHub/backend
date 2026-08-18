@@ -12,6 +12,7 @@ import com.contextstt.backend.security.CustomUserDetails;
 import com.contextstt.backend.service.ContextAnalysisService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
+import io.swagger.v3.oas.annotations.headers.Header;
 import io.swagger.v3.oas.annotations.media.Content;
 import io.swagger.v3.oas.annotations.media.Schema;
 import io.swagger.v3.oas.annotations.responses.ApiResponse;
@@ -63,6 +64,13 @@ public class ContextAnalysisController {
             @ApiResponse(responseCode = "502", description = "분석 제공자의 잘못된 응답",
                     content = @Content(schema = @Schema(implementation = ErrorResponse.class))),
             @ApiResponse(responseCode = "503", description = "분석 제공자 미설정 또는 장애",
+                    content = @Content(schema = @Schema(implementation = ErrorResponse.class))),
+            @ApiResponse(responseCode = "429", description = "사용자별 분석 요청 한도 초과",
+                    headers = @Header(
+                            name = "Retry-After",
+                            description = "다시 요청할 수 있을 때까지 남은 초",
+                            schema = @Schema(type = "integer", format = "int64")
+                    ),
                     content = @Content(schema = @Schema(implementation = ErrorResponse.class)))
     })
     @PostMapping

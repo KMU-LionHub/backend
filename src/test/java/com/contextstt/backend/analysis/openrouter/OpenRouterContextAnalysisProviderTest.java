@@ -175,6 +175,7 @@ class OpenRouterContextAnalysisProviderTest {
                         new AnalysisParticipant(2L, "친구", false)
                 ),
                 List.of(new PreviousUtterance(0, "친구", "이번 주말에 만날래?")),
+                0,
                 "화자",
                 "일정을 좀 바야 할 것 같아",
                 "일정을 좀 봐야 할 것 같아",

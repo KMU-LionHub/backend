@@ -142,6 +142,7 @@ class ContextAnalysisControllerTest {
         org.assertj.core.api.Assertions.assertThat(input.previousUtterances())
                 .extracting(ContextAnalysisInput.PreviousUtterance::text)
                 .containsExactly("이번 주말에 만날래?");
+        org.assertj.core.api.Assertions.assertThat(input.omittedPreviousUtteranceCount()).isZero();
         org.assertj.core.api.Assertions.assertThat(input.targetSpeakerName()).isEqualTo("분석 사용자");
         org.assertj.core.api.Assertions.assertThat(input.targetOriginalText()).isEqualTo("일정을 좀 바야 할 것 같아");
         org.assertj.core.api.Assertions.assertThat(input.targetCurrentText()).isEqualTo("일정을 좀 봐야 할 것 같아");

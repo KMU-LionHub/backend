@@ -7,6 +7,8 @@ import com.contextstt.backend.analysis.ContextAnalysisSource;
 import com.contextstt.backend.analysis.ContextAnalysisSourceLoader;
 import com.contextstt.backend.analysis.GeneratedContextAmbiguity;
 import com.contextstt.backend.analysis.GeneratedContextCandidate;
+import com.contextstt.backend.analysis.guardrail.ContextAnalysisRequestRateLimiter;
+import com.contextstt.backend.analysis.guardrail.ContextAnalysisRequestRateLimiter.RateLimitDecision;
 import com.contextstt.backend.domain.analysis.ContextAnalysis;
 import com.contextstt.backend.domain.analysis.ContextAmbiguity;
 import com.contextstt.backend.domain.analysis.ContextAnalysisRepository;
@@ -20,6 +22,7 @@ import com.contextstt.backend.dto.analysis.EditContextSelectionRequest;
 import com.contextstt.backend.dto.analysis.ResolveContextAmbiguityRequest;
 import com.contextstt.backend.dto.analysis.SelectContextCandidateRequest;
 import com.contextstt.backend.exception.ContextAnalysisNotFoundException;
+import com.contextstt.backend.exception.ContextAnalysisRateLimitExceededException;
 import com.contextstt.backend.exception.InvalidAnalysisResultException;
 import com.contextstt.backend.exception.InvalidRequestException;
 import com.contextstt.backend.exception.ResourceConflictException;
@@ -50,6 +53,7 @@ public class ContextAnalysisService {
     private final ContextAnalysisSourceLoader sourceLoader;
     private final ContextAnalysisGateway analysisGateway;
     private final ContextAnalysisRepository analysisRepository;
+    private final ContextAnalysisRequestRateLimiter rateLimiter;
 
     public ContextAnalysisResponse analyze(Long ownerId, CreateContextAnalysisRequest request) {
         int candidateCount = resolveCandidateCount(request.candidateCount());
@@ -59,6 +63,10 @@ public class ContextAnalysisService {
                 request.conversationId(),
                 request.utteranceId()
         );
+        RateLimitDecision rateLimit = rateLimiter.tryAcquire(ownerId);
+        if (!rateLimit.allowed()) {
+            throw new ContextAnalysisRateLimitExceededException(rateLimit.retryAfterSeconds());
+        }
         ContextAnalysisResult result = analysisGateway.analyze(source.input(), candidateCount, model);
         List<ValidatedAmbiguity> ambiguities = validateAndRank(
                 result,

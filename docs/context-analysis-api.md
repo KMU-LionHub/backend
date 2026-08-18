@@ -124,3 +124,15 @@ Gemini 3.7 Flash와 DeepSeek V4 Flash는 OpenRouter Chat Completions API를 사�
 | `OPENROUTER_APP_TITLE` | `Context STT` | OpenRouter 앱 표시 이름 |
 
 OpenRouter 모델을 선택했는데 연동이 비활성화되었거나 API 키가 없으면 `503 Service Unavailable`을 반환합니다.
+
+## 요청·입력 보호
+
+외부 AI 비용과 긴 프롬프트를 제한하기 위해 사용자별 요청 윈도우와 이전 발언 컨텍스트 예산을 적용합니다. 한도를 초과한 분석 요청에는 `429 Too Many Requests`와 `Retry-After` 헤더를 반환합니다. 이전 발언은 가장 최근의 연속된 발언부터 개수·문자 예산 안에서 선택하며, 제외된 발언 수는 AI 입력의 `omittedPreviousUtteranceCount`에 포함됩니다. 현재 요청 윈도우는 애플리케이션 인스턴스 메모리에 저장되므로 다중 인스턴스 배포에서는 Redis 같은 공유 저장소로 교체해야 합니다.
+
+| 환경 변수 | 기본값 | 설명 |
+|---|---|---|
+| `CONTEXT_ANALYSIS_MAX_PREVIOUS_UTTERANCES` | `20` | AI에 전달할 최대 이전 발언 수 |
+| `CONTEXT_ANALYSIS_MAX_PREVIOUS_CHARACTERS` | `12000` | 이전 발언 화자명·본문의 최대 문자 수 |
+| `CONTEXT_ANALYSIS_RATE_LIMIT_CAPACITY` | `10` | 사용자별 윈도우 내 최대 분석 요청 수 |
+| `CONTEXT_ANALYSIS_RATE_LIMIT_WINDOW` | `1m` | 요청 제한 윈도우 |
+| `CONTEXT_ANALYSIS_RATE_LIMIT_MAXIMUM_TRACKED_USERS` | `10000` | 메모리에 추적할 최대 사용자 수 |

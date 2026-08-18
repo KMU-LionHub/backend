@@ -8,6 +8,7 @@ public record ContextAnalysisInput(
         String conversationContext,
         List<AnalysisParticipant> participants,
         List<PreviousUtterance> previousUtterances,
+        int omittedPreviousUtteranceCount,
         String targetSpeakerName,
         String targetOriginalText,
         String targetCurrentText,
