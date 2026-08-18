@@ -31,8 +31,8 @@ public class ContextAnalysisSourceLoader {
 
         ConversationUtterance target = conversation.findUtterance(utteranceId);
         Transcription transcription = target.getTranscription();
-        if (transcription.getStatus() != TranscriptionStatus.CONFIRMED) {
-            throw new ResourceConflictException("확정된 발언만 맥락을 분석할 수 있습니다.");
+        if (transcription.getStatus() == TranscriptionStatus.SUPERSEDED) {
+            throw new ResourceConflictException("재발언으로 대체된 발언은 맥락을 분석할 수 없습니다.");
         }
 
         List<AnalysisParticipant> participants = conversation.getParticipantsInOrder().stream()

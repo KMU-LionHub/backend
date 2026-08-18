@@ -33,7 +33,7 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
-@Tag(name = "맥락 분석", description = "발언 맥락 후보 생성, 조회 및 화자 확정 API")
+@Tag(name = "맥락 분석", description = "Claude·Gemini·DeepSeek 기반 맥락 후보 생성, 조회 및 화자 확정 API")
 @RestController
 @RequestMapping("/api/context-analyses")
 @RequiredArgsConstructor
@@ -42,8 +42,9 @@ public class ContextAnalysisController {
     private final ContextAnalysisService analysisService;
 
     @Operation(
-            summary = "확정 발언 맥락 분석",
-            description = "이전 확정 발언과 대화 배경을 바탕으로 복수의 맥락 후보를 생성합니다.",
+            summary = "대화 발언 맥락 분석",
+            description = "선택한 AI 모델이 이전 확정 발언과 대화 배경을 바탕으로 복수의 맥락 후보를 생성합니다. "
+                    + "초안 발언도 분석할 수 있어 결과 확인 후 단어 교정이나 재발언이 가능합니다.",
             security = @SecurityRequirement(name = OpenApiConfig.BEARER_AUTH_SCHEME)
     )
     @ApiResponses({
@@ -56,7 +57,7 @@ public class ContextAnalysisController {
                     content = @Content(schema = @Schema(implementation = ErrorResponse.class))),
             @ApiResponse(responseCode = "404", description = "대화 또는 발언 없음",
                     content = @Content(schema = @Schema(implementation = ErrorResponse.class))),
-            @ApiResponse(responseCode = "409", description = "확정되지 않은 발언",
+            @ApiResponse(responseCode = "409", description = "분석할 수 없는 발언 상태",
                     content = @Content(schema = @Schema(implementation = ErrorResponse.class))),
             @ApiResponse(responseCode = "502", description = "분석 제공자의 잘못된 응답",
                     content = @Content(schema = @Schema(implementation = ErrorResponse.class))),
@@ -105,7 +106,7 @@ public class ContextAnalysisController {
                     content = @Content(schema = @Schema(implementation = ErrorResponse.class))),
             @ApiResponse(responseCode = "404", description = "대화 또는 발언 없음",
                     content = @Content(schema = @Schema(implementation = ErrorResponse.class))),
-            @ApiResponse(responseCode = "409", description = "확정되지 않은 발언",
+            @ApiResponse(responseCode = "409", description = "분석할 수 없는 발언 상태",
                     content = @Content(schema = @Schema(implementation = ErrorResponse.class)))
     })
     @GetMapping

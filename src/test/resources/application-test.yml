@@ -34,3 +34,11 @@ stt:
   google:
     enabled: false
     project-id: test-project
+
+claude:
+  api:
+    enabled: false
+
+openrouter:
+  api:
+    enabled: false

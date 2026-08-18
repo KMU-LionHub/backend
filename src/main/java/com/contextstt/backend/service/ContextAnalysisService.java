@@ -2,6 +2,7 @@ package com.contextstt.backend.service;
 
 import com.contextstt.backend.analysis.ContextAnalysisGateway;
 import com.contextstt.backend.analysis.ContextAnalysisResult;
+import com.contextstt.backend.analysis.ContextAnalysisModel;
 import com.contextstt.backend.analysis.ContextAnalysisSource;
 import com.contextstt.backend.analysis.ContextAnalysisSourceLoader;
 import com.contextstt.backend.analysis.GeneratedContextCandidate;
@@ -29,6 +30,7 @@ import org.springframework.util.StringUtils;
 @RequiredArgsConstructor
 public class ContextAnalysisService {
 
+    private static final ContextAnalysisModel DEFAULT_MODEL = ContextAnalysisModel.CLAUDE_SONNET_5;
     private static final int DEFAULT_CANDIDATE_COUNT = 3;
     private static final int MIN_CANDIDATE_COUNT = 2;
     private static final int MAX_CANDIDATE_COUNT = 5;
@@ -41,12 +43,13 @@ public class ContextAnalysisService {
 
     public ContextAnalysisResponse analyze(Long ownerId, CreateContextAnalysisRequest request) {
         int candidateCount = resolveCandidateCount(request.candidateCount());
+        ContextAnalysisModel model = request.model() == null ? DEFAULT_MODEL : request.model();
         ContextAnalysisSource source = sourceLoader.load(
                 ownerId,
                 request.conversationId(),
                 request.utteranceId()
         );
-        ContextAnalysisResult result = analysisGateway.analyze(source.input(), candidateCount);
+        ContextAnalysisResult result = analysisGateway.analyze(source.input(), candidateCount, model);
         List<GeneratedContextCandidate> candidates = validateAndRank(result, candidateCount);
 
         ContextAnalysis analysis = ContextAnalysis.builder()

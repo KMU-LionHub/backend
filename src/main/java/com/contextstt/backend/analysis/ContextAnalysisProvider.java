@@ -1,6 +1,8 @@
 package com.contextstt.backend.analysis;
 
-public interface ContextAnalysisGateway {
+public interface ContextAnalysisProvider {
+
+    boolean supports(ContextAnalysisModel model);
 
     ContextAnalysisResult analyze(
             ContextAnalysisInput input,

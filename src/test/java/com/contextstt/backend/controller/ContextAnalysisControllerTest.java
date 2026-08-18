@@ -15,6 +15,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 
 import com.contextstt.backend.analysis.ContextAnalysisGateway;
 import com.contextstt.backend.analysis.ContextAnalysisInput;
+import com.contextstt.backend.analysis.ContextAnalysisModel;
 import com.contextstt.backend.analysis.ContextAnalysisResult;
 import com.contextstt.backend.analysis.GeneratedContextCandidate;
 import com.contextstt.backend.domain.user.User;
@@ -95,7 +96,11 @@ class ContextAnalysisControllerTest {
                 .andExpect(jsonPath("$.currentText").value("일정을 좀 봐야 할 것 같아"));
         confirm(owner.token(), conversation.id(), target.id());
 
-        when(analysisGateway.analyze(any(ContextAnalysisInput.class), eq(3)))
+        when(analysisGateway.analyze(
+                any(ContextAnalysisInput.class),
+                eq(3),
+                eq(ContextAnalysisModel.CLAUDE_SONNET_5)
+        ))
                 .thenReturn(validAnalysisResult());
 
         MvcResult created = analyze(owner.token(), conversation.id(), target.id(), 3)
@@ -118,7 +123,11 @@ class ContextAnalysisControllerTest {
         Number firstCandidateId = jsonNumber(created, "$.candidates[0].id");
 
         ArgumentCaptor<ContextAnalysisInput> inputCaptor = ArgumentCaptor.forClass(ContextAnalysisInput.class);
-        verify(analysisGateway).analyze(inputCaptor.capture(), eq(3));
+        verify(analysisGateway).analyze(
+                inputCaptor.capture(),
+                eq(3),
+                eq(ContextAnalysisModel.CLAUDE_SONNET_5)
+        );
         ContextAnalysisInput input = inputCaptor.getValue();
         org.assertj.core.api.Assertions.assertThat(input.conversationContext()).isEqualTo("친구와 약속을 정하는 대화");
         org.assertj.core.api.Assertions.assertThat(input.participants()).hasSize(2);
@@ -166,15 +175,103 @@ class ContextAnalysisControllerTest {
     }
 
     @Test
-    void rejectsDraftUtteranceAndAnotherUsersConversationBeforeCallingProvider() throws Exception {
+    void analyzesDraftUtteranceSoItCanStillBeCorrected() throws Exception {
         UserToken owner = userToken("소유자");
-        UserToken other = userToken("다른 사용자");
         ConversationSetup conversation = createConversation(owner.token());
         UtteranceSetup draft = createUtterance(owner.token(), conversation, "아직 확정하지 않은 발언");
 
+        when(analysisGateway.analyze(
+                any(ContextAnalysisInput.class),
+                eq(3),
+                eq(ContextAnalysisModel.CLAUDE_SONNET_5)
+        ))
+                .thenReturn(validAnalysisResult());
+
         analyze(owner.token(), conversation.id(), draft.id(), 3)
-                .andExpect(status().isConflict())
-                .andExpect(jsonPath("$.message").value("확정된 발언만 맥락을 분석할 수 있습니다."));
+                .andExpect(status().isCreated())
+                .andExpect(jsonPath("$.sourceCurrentText").value("아직 확정하지 않은 발언"));
+
+        MvcResult transcription = mockMvc.perform(get(
+                        "/api/stt/transcriptions/{transcriptionId}",
+                        draft.transcriptionId()
+                ).header("Authorization", bearer(owner.token())))
+                .andExpect(status().isOk())
+                .andReturn();
+        Number wordId = jsonNumber(transcription, "$.words[0].id");
+
+        mockMvc.perform(patch(
+                        "/api/stt/transcriptions/{transcriptionId}/words/{wordId}",
+                        draft.transcriptionId(),
+                        wordId.longValue()
+                ).header("Authorization", bearer(owner.token()))
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"text\":\"아직은\"}"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.currentText").value("아직은 확정하지 않은 발언"));
+    }
+
+    @Test
+    void routesExplicitOpenRouterModelSelection() throws Exception {
+        UserToken owner = userToken("모델 선택 사용자");
+        ConversationSetup conversation = createConversation(owner.token());
+        UtteranceSetup draft = createUtterance(owner.token(), conversation, "빠른 모델로 분석할 발언");
+        ContextAnalysisResult openRouterResult = new ContextAnalysisResult(
+                "OPENROUTER",
+                "google/gemini-3.7-flash",
+                validAnalysisResult().candidates()
+        );
+
+        when(analysisGateway.analyze(
+                any(ContextAnalysisInput.class),
+                eq(3),
+                eq(ContextAnalysisModel.GEMINI_3_7_FLASH)
+        )).thenReturn(openRouterResult);
+
+        analyze(
+                owner.token(),
+                conversation.id(),
+                draft.id(),
+                3,
+                ContextAnalysisModel.GEMINI_3_7_FLASH
+        )
+                .andExpect(status().isCreated())
+                .andExpect(jsonPath("$.provider").value("OPENROUTER"))
+                .andExpect(jsonPath("$.model").value("google/gemini-3.7-flash"));
+
+        verify(analysisGateway).analyze(
+                any(ContextAnalysisInput.class),
+                eq(3),
+                eq(ContextAnalysisModel.GEMINI_3_7_FLASH)
+        );
+    }
+
+    @Test
+    void rejectsUnknownModelValueBeforeCallingProvider() throws Exception {
+        UserToken owner = userToken("잘못된 모델 사용자");
+        String payload = """
+                {
+                  "conversationId": 1,
+                  "utteranceId": 1,
+                  "candidateCount": 3,
+                  "model": "ARBITRARY_EXPENSIVE_MODEL"
+                }
+                """;
+
+        mockMvc.perform(post("/api/context-analyses")
+                        .header("Authorization", bearer(owner.token()))
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(payload))
+                .andExpect(status().isBadRequest());
+
+        verifyNoInteractions(analysisGateway);
+    }
+
+    @Test
+    void rejectsAnotherUsersConversationBeforeCallingProvider() throws Exception {
+        UserToken owner = userToken("소유자");
+        UserToken other = userToken("다른 사용자");
+        ConversationSetup conversation = createConversation(owner.token());
+        UtteranceSetup draft = createUtterance(owner.token(), conversation, "소유자의 발언");
 
         analyze(other.token(), conversation.id(), draft.id(), 3)
                 .andExpect(status().isNotFound())
@@ -190,19 +287,31 @@ class ContextAnalysisControllerTest {
         UtteranceSetup target = createUtterance(owner.token(), conversation, "분석할 발언");
         confirm(owner.token(), conversation.id(), target.id());
 
-        when(analysisGateway.analyze(any(ContextAnalysisInput.class), eq(3)))
+        when(analysisGateway.analyze(
+                any(ContextAnalysisInput.class),
+                eq(3),
+                eq(ContextAnalysisModel.CLAUDE_SONNET_5)
+        ))
                 .thenThrow(new AnalysisProviderUnavailableException("분석 제공자 장애"));
         analyze(owner.token(), conversation.id(), target.id(), 3)
                 .andExpect(status().isServiceUnavailable())
                 .andExpect(jsonPath("$.message").value("분석 제공자 장애"));
 
-        when(analysisGateway.analyze(any(ContextAnalysisInput.class), eq(3)))
+        when(analysisGateway.analyze(
+                any(ContextAnalysisInput.class),
+                eq(3),
+                eq(ContextAnalysisModel.CLAUDE_SONNET_5)
+        ))
                 .thenReturn(new ContextAnalysisResult("TEST_AI", "broken-model", null));
         analyze(owner.token(), conversation.id(), target.id(), 3)
                 .andExpect(status().isBadGateway())
                 .andExpect(jsonPath("$.message").value("맥락 분석 제공자가 올바르지 않은 결과를 반환했습니다."));
 
-        when(analysisGateway.analyze(any(ContextAnalysisInput.class), eq(3)))
+        when(analysisGateway.analyze(
+                any(ContextAnalysisInput.class),
+                eq(3),
+                eq(ContextAnalysisModel.CLAUDE_SONNET_5)
+        ))
                 .thenReturn(new ContextAnalysisResult(
                         "TEST_AI",
                         "broken-model",
@@ -230,7 +339,11 @@ class ContextAnalysisControllerTest {
         analyze(owner.token(), conversation.id(), target.id(), 1)
                 .andExpect(status().isBadRequest());
 
-        when(analysisGateway.analyze(any(ContextAnalysisInput.class), eq(3)))
+        when(analysisGateway.analyze(
+                any(ContextAnalysisInput.class),
+                eq(3),
+                eq(ContextAnalysisModel.CLAUDE_SONNET_5)
+        ))
                 .thenReturn(validAnalysisResult());
         MvcResult created = analyze(owner.token(), conversation.id(), target.id(), null)
                 .andExpect(status().isCreated())
@@ -258,8 +371,18 @@ class ContextAnalysisControllerTest {
             Long utteranceId,
             Integer candidateCount
     ) throws Exception {
+        return analyze(token, conversationId, utteranceId, candidateCount, null);
+    }
+
+    private org.springframework.test.web.servlet.ResultActions analyze(
+            String token,
+            Long conversationId,
+            Long utteranceId,
+            Integer candidateCount,
+            ContextAnalysisModel model
+    ) throws Exception {
         String payload = objectMapper.writeValueAsString(
-                new AnalysisPayload(conversationId, utteranceId, candidateCount)
+                new AnalysisPayload(conversationId, utteranceId, candidateCount, model)
         );
         return mockMvc.perform(post("/api/context-analyses")
                 .header("Authorization", bearer(token))
@@ -383,7 +506,12 @@ class ContextAnalysisControllerTest {
     private record UtteranceSetup(Long id, Long transcriptionId) {
     }
 
-    private record AnalysisPayload(Long conversationId, Long utteranceId, Integer candidateCount) {
+    private record AnalysisPayload(
+            Long conversationId,
+            Long utteranceId,
+            Integer candidateCount,
+            ContextAnalysisModel model
+    ) {
     }
 
     private record UtterancePayload(Long transcriptionId, Long speakerParticipantId) {
