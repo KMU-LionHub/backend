@@ -135,6 +135,14 @@ class OpenApiContractTest {
                                 + "['post']"
                 ).exists())
                 .andExpect(jsonPath(
+                        "$['paths']['/api/conversations/{conversationId}/utterances/{utteranceId}/resolution']"
+                                + "['get']['responses']['200']"
+                ).exists())
+                .andExpect(jsonPath(
+                        "$['paths']['/api/conversations/{conversationId}/utterances/{utteranceId}/resolution']"
+                                + "['get']['responses']['404']"
+                ).exists())
+                .andExpect(jsonPath(
                         "$['paths']['/api/conversations/{conversationId}/close']['post']"
                 ).exists());
     }

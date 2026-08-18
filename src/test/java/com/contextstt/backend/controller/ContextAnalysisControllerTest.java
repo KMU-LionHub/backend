@@ -253,6 +253,15 @@ class ContextAnalysisControllerTest {
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.stale").value(true))
                 .andExpect(jsonPath("$.usableResolution").value(false));
+
+        mockMvc.perform(get(
+                        "/api/conversations/{conversationId}/utterances/{utteranceId}/resolution",
+                        conversation.id(),
+                        draft.id()
+                ).header("Authorization", bearer(owner.token())))
+                .andExpect(status().isNotFound())
+                .andExpect(jsonPath("$.message")
+                        .value("현재 발언에 사용할 수 있는 확정 맥락을 찾을 수 없습니다."));
     }
 
     @Test
@@ -266,11 +275,22 @@ class ContextAnalysisControllerTest {
                 eq(ContextAnalysisModel.CLAUDE_SONNET_5)
         )).thenReturn(new ContextAnalysisResult("TEST_AI", "context-test-v1", List.of()));
 
-        analyze(owner.token(), conversation.id(), utterance.id(), 3)
+        MvcResult analysis = analyze(owner.token(), conversation.id(), utterance.id(), 3)
                 .andExpect(status().isCreated())
                 .andExpect(jsonPath("$.needsClarification").value(false))
                 .andExpect(jsonPath("$.ambiguityCount").value(0))
-                .andExpect(jsonPath("$.ambiguities").isEmpty());
+                .andExpect(jsonPath("$.ambiguities").isEmpty())
+                .andReturn();
+
+        mockMvc.perform(get(
+                        "/api/conversations/{conversationId}/utterances/{utteranceId}/resolution",
+                        conversation.id(),
+                        utterance.id()
+                ).header("Authorization", bearer(owner.token())))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.analysisId").value(jsonNumber(analysis, "$.id").intValue()))
+                .andExpect(jsonPath("$.needsClarification").value(false))
+                .andExpect(jsonPath("$.resolvedAmbiguities").isEmpty());
     }
 
     @Test
@@ -289,6 +309,13 @@ class ContextAnalysisControllerTest {
         Number analysisId = jsonNumber(created, "$.id");
         Number ambiguityId = jsonNumber(created, "$.ambiguities[0].id");
 
+        mockMvc.perform(get(
+                        "/api/conversations/{conversationId}/utterances/{utteranceId}/resolution",
+                        conversation.id(),
+                        utterance.id()
+                ).header("Authorization", bearer(owner.token())))
+                .andExpect(status().isNotFound());
+
         mockMvc.perform(put(
                         "/api/context-analyses/{analysisId}/ambiguities/{ambiguityId}/resolution",
                         analysisId.longValue(),
@@ -305,6 +332,39 @@ class ContextAnalysisControllerTest {
                         .value("주간 보고서를 내일까지 작성해 달라는 뜻"))
                 .andExpect(jsonPath("$.fullyResolved").value(true))
                 .andExpect(jsonPath("$.usableResolution").value(true));
+
+        mockMvc.perform(get(
+                        "/api/conversations/{conversationId}/utterances/{utteranceId}/resolution",
+                        conversation.id(),
+                        utterance.id()
+                ).header("Authorization", bearer(owner.token())))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.analysisId").value(analysisId.intValue()))
+                .andExpect(jsonPath("$.sourceCurrentText").value("그거 내일까지 부탁해"))
+                .andExpect(jsonPath("$.needsClarification").value(true))
+                .andExpect(jsonPath("$.resolvedAmbiguities[0].resolution.type").value("CUSTOM"))
+                .andExpect(jsonPath("$.resolvedAmbiguities[0].resolution.finalText")
+                        .value("주간 보고서를 내일까지 작성해 달라는 뜻"));
+
+        UserToken other = userToken("다른 조회 사용자");
+        mockMvc.perform(get(
+                        "/api/conversations/{conversationId}/utterances/{utteranceId}/resolution",
+                        conversation.id(),
+                        utterance.id()
+                ).header("Authorization", bearer(other.token())))
+                .andExpect(status().isNotFound());
+
+        analyze(owner.token(), conversation.id(), utterance.id(), 3)
+                .andExpect(status().isCreated())
+                .andExpect(jsonPath("$.fullyResolved").value(false));
+
+        mockMvc.perform(get(
+                        "/api/conversations/{conversationId}/utterances/{utteranceId}/resolution",
+                        conversation.id(),
+                        utterance.id()
+                ).header("Authorization", bearer(owner.token())))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.analysisId").value(analysisId.intValue()));
 
         mockMvc.perform(put(
                         "/api/context-analyses/{analysisId}/ambiguities/{ambiguityId}/resolution",
