@@ -50,6 +50,7 @@ public class TranscriptionService {
             String languageCode
     ) {
         Transcription previous = findOwnedTranscription(transcriptionId, userId);
+        previous.ensureRerecordable();
         return createTranscription(userId, previous, audio, languageCode);
     }
 

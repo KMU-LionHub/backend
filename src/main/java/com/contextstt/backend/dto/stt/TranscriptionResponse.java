@@ -1,6 +1,7 @@
 package com.contextstt.backend.dto.stt;
 
 import com.contextstt.backend.domain.transcription.Transcription;
+import com.contextstt.backend.domain.transcription.TranscriptionStatus;
 import io.swagger.v3.oas.annotations.media.Schema;
 import java.time.LocalDateTime;
 import java.util.List;
@@ -25,6 +26,10 @@ public record TranscriptionResponse(
         String model,
         @Schema(description = "문장 전체 신뢰도", example = "0.94", nullable = true)
         Float confidence,
+        @Schema(description = "전사 상태(DRAFT, CONFIRMED, SUPERSEDED)", example = "DRAFT")
+        TranscriptionStatus status,
+        @Schema(description = "화자가 전사를 확정한 시각", nullable = true)
+        LocalDateTime confirmedAt,
         @Schema(description = "업로드 오디오 MIME 타입", example = "audio/webm", nullable = true)
         String audioContentType,
         @Schema(description = "업로드 오디오 크기(byte)", example = "482310")
@@ -44,6 +49,8 @@ public record TranscriptionResponse(
                 .provider(transcription.getProvider())
                 .model(transcription.getModel())
                 .confidence(transcription.getConfidence())
+                .status(transcription.getStatus())
+                .confirmedAt(transcription.getConfirmedAt())
                 .audioContentType(transcription.getAudioContentType())
                 .audioSizeBytes(transcription.getAudioSizeBytes())
                 .words(transcription.getWords().stream().map(TranscriptWordResponse::from).toList())

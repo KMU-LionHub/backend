@@ -103,4 +103,39 @@ class OpenApiContractTest {
                                 + "['post']['responses']['201']"
                 ).exists());
     }
+
+    @Test
+    void conversationOperationsRequireAuthenticationAndExposeSessionFlow() throws Exception {
+        mockMvc.perform(get("/v3/api-docs"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath(
+                        "$['paths']['/api/conversations']['post']['security'][0].bearerAuth"
+                ).isArray())
+                .andExpect(jsonPath("$['paths']['/api/conversations']['post']['responses']['201']").exists())
+                .andExpect(jsonPath("$['paths']['/api/conversations']['get']").exists())
+                .andExpect(jsonPath("$['paths']['/api/conversations/{conversationId}']['get']").exists())
+                .andExpect(jsonPath(
+                        "$['paths']['/api/conversations/{conversationId}/participants']['post']"
+                ).exists())
+                .andExpect(jsonPath(
+                        "$['paths']['/api/conversations/{conversationId}/participants']['post']['responses']['201']"
+                ).exists())
+                .andExpect(jsonPath(
+                        "$['paths']['/api/conversations/{conversationId}/utterances']['post']"
+                ).exists())
+                .andExpect(jsonPath(
+                        "$['paths']['/api/conversations/{conversationId}/utterances']['post']['responses']['201']"
+                ).exists())
+                .andExpect(jsonPath(
+                        "$['paths']['/api/conversations/{conversationId}/utterances/{utteranceId}/transcription']"
+                                + "['patch']"
+                ).exists())
+                .andExpect(jsonPath(
+                        "$['paths']['/api/conversations/{conversationId}/utterances/{utteranceId}/confirm']"
+                                + "['post']"
+                ).exists())
+                .andExpect(jsonPath(
+                        "$['paths']['/api/conversations/{conversationId}/close']['post']"
+                ).exists());
+    }
 }
