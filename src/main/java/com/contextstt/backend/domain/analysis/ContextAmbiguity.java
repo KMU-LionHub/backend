@@ -127,6 +127,26 @@ public class ContextAmbiguity {
         return selection;
     }
 
+    public ContextAnalysisSelection resolveCustom(String text) {
+        if (selection == null) {
+            selection = ContextAnalysisSelection.createCustom(this, text);
+        } else {
+            selection.changeToCustom(text);
+        }
+        analysis.touch();
+        return selection;
+    }
+
+    public ContextAnalysisSelection dismiss() {
+        if (selection == null) {
+            selection = ContextAnalysisSelection.createDismissed(this);
+        } else {
+            selection.changeToDismissed();
+        }
+        analysis.touch();
+        return selection;
+    }
+
     @PrePersist
     protected void onCreate() {
         createdAt = LocalDateTime.now();

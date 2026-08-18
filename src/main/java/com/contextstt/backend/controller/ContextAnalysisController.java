@@ -5,6 +5,7 @@ import com.contextstt.backend.dto.analysis.ContextAnalysisHistoryResponse;
 import com.contextstt.backend.dto.analysis.ContextAnalysisResponse;
 import com.contextstt.backend.dto.analysis.CreateContextAnalysisRequest;
 import com.contextstt.backend.dto.analysis.EditContextSelectionRequest;
+import com.contextstt.backend.dto.analysis.ResolveContextAmbiguityRequest;
 import com.contextstt.backend.dto.analysis.SelectContextCandidateRequest;
 import com.contextstt.backend.exception.ErrorResponse;
 import com.contextstt.backend.security.CustomUserDetails;
@@ -172,5 +173,33 @@ public class ContextAnalysisController {
             @Valid @RequestBody EditContextSelectionRequest request
     ) {
         return analysisService.editSelection(principal.getUserId(), analysisId, ambiguityId, request);
+    }
+
+    @Operation(
+            summary = "모호성 구간 확정",
+            description = "AI 후보 선택, 직접 입력 또는 모호성 무시 중 하나로 구간을 확정합니다.",
+            security = @SecurityRequirement(name = OpenApiConfig.BEARER_AUTH_SCHEME)
+    )
+    @ApiResponses({
+            @ApiResponse(responseCode = "200", description = "확정 성공",
+                    content = @Content(mediaType = MediaType.APPLICATION_JSON_VALUE,
+                            schema = @Schema(implementation = ContextAnalysisResponse.class))),
+            @ApiResponse(responseCode = "400", description = "확정 유형과 요청 값 불일치",
+                    content = @Content(schema = @Schema(implementation = ErrorResponse.class))),
+            @ApiResponse(responseCode = "401", description = "인증 필요",
+                    content = @Content(schema = @Schema(implementation = ErrorResponse.class))),
+            @ApiResponse(responseCode = "404", description = "분석 결과, 모호성 구간 또는 후보 없음",
+                    content = @Content(schema = @Schema(implementation = ErrorResponse.class))),
+            @ApiResponse(responseCode = "409", description = "분석 이후 전사 변경 또는 동시 수정 충돌",
+                    content = @Content(schema = @Schema(implementation = ErrorResponse.class)))
+    })
+    @PutMapping("/{analysisId}/ambiguities/{ambiguityId}/resolution")
+    public ContextAnalysisResponse resolve(
+            @Parameter(hidden = true) @AuthenticationPrincipal CustomUserDetails principal,
+            @PathVariable Long analysisId,
+            @PathVariable Long ambiguityId,
+            @Valid @RequestBody ResolveContextAmbiguityRequest request
+    ) {
+        return analysisService.resolve(principal.getUserId(), analysisId, ambiguityId, request);
     }
 }

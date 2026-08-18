@@ -13,6 +13,8 @@ public record ContextAnalysisSummaryResponse(
         int ambiguityCount,
         int resolvedAmbiguityCount,
         boolean fullyResolved,
+        boolean stale,
+        boolean usableResolution,
         LocalDateTime createdAt,
         LocalDateTime updatedAt
 ) {
@@ -26,6 +28,8 @@ public record ContextAnalysisSummaryResponse(
                 .ambiguityCount(analysis.getAmbiguityCount())
                 .resolvedAmbiguityCount(analysis.getResolvedAmbiguityCount())
                 .fullyResolved(analysis.isFullyResolved())
+                .stale(analysis.isStale())
+                .usableResolution(analysis.hasUsableResolution())
                 .createdAt(analysis.getCreatedAt())
                 .updatedAt(analysis.getUpdatedAt())
                 .build();

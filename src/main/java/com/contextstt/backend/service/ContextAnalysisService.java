@@ -17,10 +17,12 @@ import com.contextstt.backend.dto.analysis.ContextAnalysisResponse;
 import com.contextstt.backend.dto.analysis.ContextAnalysisSummaryResponse;
 import com.contextstt.backend.dto.analysis.CreateContextAnalysisRequest;
 import com.contextstt.backend.dto.analysis.EditContextSelectionRequest;
+import com.contextstt.backend.dto.analysis.ResolveContextAmbiguityRequest;
 import com.contextstt.backend.dto.analysis.SelectContextCandidateRequest;
 import com.contextstt.backend.exception.ContextAnalysisNotFoundException;
 import com.contextstt.backend.exception.InvalidAnalysisResultException;
 import com.contextstt.backend.exception.InvalidRequestException;
+import com.contextstt.backend.exception.ResourceConflictException;
 import java.math.BigDecimal;
 import java.math.RoundingMode;
 import java.util.Comparator;
@@ -137,6 +139,7 @@ public class ContextAnalysisService {
             SelectContextCandidateRequest request
     ) {
         ContextAnalysis analysis = findOwnedAnalysis(analysisId, ownerId);
+        ensureFresh(analysis);
         analysis.findAmbiguity(ambiguityId).selectCandidate(request.candidateId());
         analysisRepository.flush();
         return ContextAnalysisResponse.from(analysis);
@@ -150,7 +153,44 @@ public class ContextAnalysisService {
             EditContextSelectionRequest request
     ) {
         ContextAnalysis analysis = findOwnedAnalysis(analysisId, ownerId);
+        ensureFresh(analysis);
         analysis.findAmbiguity(ambiguityId).editSelection(request.text().trim());
+        analysisRepository.flush();
+        return ContextAnalysisResponse.from(analysis);
+    }
+
+    @Transactional
+    public ContextAnalysisResponse resolve(
+            Long ownerId,
+            Long analysisId,
+            Long ambiguityId,
+            ResolveContextAmbiguityRequest request
+    ) {
+        ContextAnalysis analysis = findOwnedAnalysis(analysisId, ownerId);
+        ensureFresh(analysis);
+        ContextAmbiguity ambiguity = analysis.findAmbiguity(ambiguityId);
+
+        switch (request.type()) {
+            case CANDIDATE -> {
+                if (request.candidateId() == null || StringUtils.hasText(request.text())) {
+                    throw invalidResolutionRequest();
+                }
+                ambiguity.selectCandidate(request.candidateId());
+            }
+            case CUSTOM -> {
+                if (request.candidateId() != null || !StringUtils.hasText(request.text())) {
+                    throw invalidResolutionRequest();
+                }
+                ambiguity.resolveCustom(request.text().trim());
+            }
+            case DISMISSED -> {
+                if (request.candidateId() != null || StringUtils.hasText(request.text())) {
+                    throw invalidResolutionRequest();
+                }
+                ambiguity.dismiss();
+            }
+        }
+
         analysisRepository.flush();
         return ContextAnalysisResponse.from(analysis);
     }
@@ -166,6 +206,18 @@ public class ContextAnalysisService {
             throw new InvalidRequestException("맥락 후보 수는 2개 이상 5개 이하여야 합니다.");
         }
         return count;
+    }
+
+    private void ensureFresh(ContextAnalysis analysis) {
+        if (analysis.isStale()) {
+            throw new ResourceConflictException(
+                    "분석 이후 전사가 변경되었습니다. 현재 발언으로 다시 분석해 주세요."
+            );
+        }
+    }
+
+    private InvalidRequestException invalidResolutionRequest() {
+        return new InvalidRequestException("확정 유형에 맞는 candidateId 또는 text를 입력해 주세요.");
     }
 
     private List<ValidatedAmbiguity> validateAndRank(

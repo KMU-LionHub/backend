@@ -143,13 +143,14 @@ class ContextAnalysisMigrationTest {
 
         try (Statement statement = connection.createStatement();
              ResultSet resultSet = statement.executeQuery("""
-                     SELECT selection.final_text, ambiguity.analysis_id
+                     SELECT selection.final_text, selection.resolution_type, ambiguity.analysis_id
                      FROM context_analysis_selections selection
                      JOIN context_ambiguities ambiguity ON ambiguity.id = selection.ambiguity_id
                      WHERE selection.id = 1
                      """)) {
             assertThat(resultSet.next()).isTrue();
             assertThat(resultSet.getString("final_text")).isEqualTo("주간 보고서 작성");
+            assertThat(resultSet.getString("resolution_type")).isEqualTo("CANDIDATE");
             assertThat(resultSet.getLong("analysis_id")).isEqualTo(1L);
         }
     }

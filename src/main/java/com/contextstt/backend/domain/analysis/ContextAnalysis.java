@@ -150,6 +150,16 @@ public class ContextAnalysis {
         return ambiguities.stream().allMatch(ambiguity -> ambiguity.getSelection() != null);
     }
 
+    public boolean isStale() {
+        Transcription currentTranscription = utterance.getTranscription();
+        return !currentTranscription.getId().equals(transcription.getId())
+                || !currentTranscription.getCurrentText().equals(sourceCurrentText);
+    }
+
+    public boolean hasUsableResolution() {
+        return !isStale() && isFullyResolved();
+    }
+
     void touch() {
         updatedAt = LocalDateTime.now();
     }

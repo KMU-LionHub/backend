@@ -22,6 +22,9 @@ public record ContextAnalysisResponse(
         int requestedCandidateCount,
         int ambiguityCount,
         boolean needsClarification,
+        boolean stale,
+        boolean fullyResolved,
+        boolean usableResolution,
         List<ContextAmbiguityResponse> ambiguities,
         LocalDateTime createdAt,
         LocalDateTime updatedAt
@@ -42,6 +45,9 @@ public record ContextAnalysisResponse(
                 .requestedCandidateCount(analysis.getRequestedCandidateCount())
                 .ambiguityCount(analysis.getAmbiguityCount())
                 .needsClarification(analysis.getAmbiguityCount() > 0)
+                .stale(analysis.isStale())
+                .fullyResolved(analysis.isFullyResolved())
+                .usableResolution(analysis.hasUsableResolution())
                 .ambiguities(analysis.getAmbiguities().stream()
                         .map(ContextAmbiguityResponse::from)
                         .toList())
