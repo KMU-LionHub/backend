@@ -6,12 +6,14 @@ import com.contextstt.backend.dto.conversation.ConversationPageResponse;
 import com.contextstt.backend.dto.conversation.ConversationParticipantResponse;
 import com.contextstt.backend.dto.conversation.ConversationResponse;
 import com.contextstt.backend.dto.conversation.ConversationUtteranceResponse;
+import com.contextstt.backend.dto.conversation.ConversationUtteranceResolutionResponse;
 import com.contextstt.backend.dto.conversation.CreateConversationRequest;
 import com.contextstt.backend.dto.conversation.CreateParticipantRequest;
 import com.contextstt.backend.dto.conversation.ReplaceUtteranceTranscriptionRequest;
 import com.contextstt.backend.exception.ErrorResponse;
 import com.contextstt.backend.security.CustomUserDetails;
 import com.contextstt.backend.service.ConversationService;
+import com.contextstt.backend.service.ConversationContextResolutionService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.media.Content;
@@ -42,6 +44,7 @@ import org.springframework.web.bind.annotation.RestController;
 public class ConversationController {
 
     private final ConversationService conversationService;
+    private final ConversationContextResolutionService contextResolutionService;
 
     @Operation(
             summary = "대화 생성",
@@ -230,6 +233,33 @@ public class ConversationController {
             @PathVariable Long utteranceId
     ) {
         return conversationService.confirmUtterance(principal.getUserId(), conversationId, utteranceId);
+    }
+
+    @Operation(
+            summary = "발언의 최신 확정 맥락 조회",
+            description = "현재 전사와 일치하고 모든 모호성 구간이 확정된 최신 분석 결과를 반환합니다.",
+            security = @SecurityRequirement(name = OpenApiConfig.BEARER_AUTH_SCHEME)
+    )
+    @ApiResponses({
+            @ApiResponse(responseCode = "200", description = "조회 성공",
+                    content = @Content(mediaType = MediaType.APPLICATION_JSON_VALUE,
+                            schema = @Schema(implementation = ConversationUtteranceResolutionResponse.class))),
+            @ApiResponse(responseCode = "401", description = "인증 필요",
+                    content = @Content(schema = @Schema(implementation = ErrorResponse.class))),
+            @ApiResponse(responseCode = "404", description = "대화, 발언 또는 사용 가능한 확정 맥락 없음",
+                    content = @Content(schema = @Schema(implementation = ErrorResponse.class)))
+    })
+    @GetMapping("/{conversationId}/utterances/{utteranceId}/resolution")
+    public ConversationUtteranceResolutionResponse getUtteranceResolution(
+            @Parameter(hidden = true) @AuthenticationPrincipal CustomUserDetails principal,
+            @PathVariable Long conversationId,
+            @PathVariable Long utteranceId
+    ) {
+        return contextResolutionService.getLatest(
+                principal.getUserId(),
+                conversationId,
+                utteranceId
+        );
     }
 
     @Operation(

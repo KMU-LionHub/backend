@@ -25,6 +25,7 @@
 | 구간별 후보 선택 | `PUT` | `/api/context-analyses/{analysisId}/ambiguities/{ambiguityId}/selection` |
 | 구간별 선택 문구 수정 | `PATCH` | `/api/context-analyses/{analysisId}/ambiguities/{ambiguityId}/selection` |
 | 구간 확정 | `PUT` | `/api/context-analyses/{analysisId}/ambiguities/{ambiguityId}/resolution` |
+| 발언의 최신 확정 맥락 | `GET` | `/api/conversations/{conversationId}/utterances/{utteranceId}/resolution` |
 
 모든 API에는 Bearer access token이 필요합니다.
 
@@ -91,6 +92,17 @@ AI가 표시한 구간이 실제로 모호하지 않다면 다음처럼 무시 �
 ```
 
 분석 후 단어를 수정하거나 재발언하면 해당 분석의 `stale`이 `true`가 됩니다. 오래된 분석에는 후보 선택·직접 확정을 적용할 수 없으며 현재 전사로 다시 분석해야 합니다. 모든 구간이 확정되고 분석이 최신이면 `usableResolution`이 `true`입니다.
+
+### 대화 발언의 최종 맥락 조회
+
+대화 화면에서는 분석 이력을 직접 비교하지 않고 다음 API로 현재 사용할 최종 맥락을 조회합니다.
+
+```http
+GET /api/conversations/{conversationId}/utterances/{utteranceId}/resolution
+Authorization: Bearer <accessToken>
+```
+
+현재 전사와 일치하고 모든 모호성 구간이 확정된 분석 중 가장 최근 결과만 반환합니다. 명확한 발언은 `needsClarification: false`와 빈 `resolvedAmbiguities`를 반환합니다. 분석이 없거나 최신 전사에 사용할 수 있는 확정 결과가 없으면 `404 Not Found`를 반환합니다.
 
 ## Claude 설정
 
