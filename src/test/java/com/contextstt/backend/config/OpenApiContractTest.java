@@ -71,4 +71,36 @@ class OpenApiContractTest {
                 .andExpect(jsonPath("$.components.schemas.SignupRequest.properties.password.example")
                         .value("password1"));
     }
+
+    @Test
+    void sttOperationsRequireAuthenticationAndDocumentExpectedFailures() throws Exception {
+        mockMvc.perform(get("/v3/api-docs"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath(
+                        "$['paths']['/api/stt/transcriptions']['post']['security'][0].bearerAuth"
+                ).isArray())
+                .andExpect(jsonPath("$['paths']['/api/stt/transcriptions']['post']['responses']['201']").exists())
+                .andExpect(jsonPath("$['paths']['/api/stt/transcriptions']['post']['responses']['413']").exists())
+                .andExpect(jsonPath("$['paths']['/api/stt/transcriptions']['post']['responses']['422']").exists())
+                .andExpect(jsonPath("$['paths']['/api/stt/transcriptions']['post']['responses']['503']").exists())
+                .andExpect(jsonPath(
+                        "$['paths']['/api/stt/transcriptions']['post']['requestBody']['content']"
+                                + "['multipart/form-data']['schema']['properties']['audio']['format']"
+                ).value("binary"))
+                .andExpect(jsonPath(
+                        "$['paths']['/api/stt/transcriptions']['post']['responses']['201']['content']"
+                                + "['application/json']['schema']['$ref']"
+                ).value("#/components/schemas/TranscriptionResponse"))
+                .andExpect(jsonPath(
+                        "$['paths']['/api/stt/transcriptions/{transcriptionId}']['get']['security'][0].bearerAuth"
+                ).isArray())
+                .andExpect(jsonPath(
+                        "$['paths']['/api/stt/transcriptions/{transcriptionId}/words/{wordId}']"
+                                + "['patch']['responses']['409']"
+                ).exists())
+                .andExpect(jsonPath(
+                        "$['paths']['/api/stt/transcriptions/{transcriptionId}/re-record']"
+                                + "['post']['responses']['201']"
+                ).exists());
+    }
 }

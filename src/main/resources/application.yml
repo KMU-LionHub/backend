@@ -2,6 +2,11 @@ spring:
   application:
     name: backend
 
+  servlet:
+    multipart:
+      max-file-size: 10MB
+      max-request-size: 11MB
+
   datasource:
     url: jdbc:mysql://${DB_HOST:localhost}:${DB_PORT:3306}/${DB_NAME:context_stt}?useUnicode=true&characterEncoding=UTF-8&serverTimezone=Asia/Seoul
     username: ${DB_USERNAME:root}
@@ -50,3 +55,11 @@ auth:
     login:
       capacity: ${AUTH_RATE_LIMIT_LOGIN_CAPACITY:10}
       window: ${AUTH_RATE_LIMIT_LOGIN_WINDOW:1m}
+
+stt:
+  google:
+    enabled: ${STT_GOOGLE_ENABLED:false}
+    project-id: ${GOOGLE_CLOUD_PROJECT:}
+    location: ${STT_GOOGLE_LOCATION:asia-northeast1}
+    model: ${STT_GOOGLE_MODEL:long}
+    max-audio-bytes: ${STT_MAX_AUDIO_BYTES:10485760}
