@@ -29,3 +29,8 @@ auth:
     login:
       capacity: 10000
       window: 1m
+
+stt:
+  google:
+    enabled: false
+    project-id: test-project

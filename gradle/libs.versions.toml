@@ -1,4 +1,5 @@
 [versions]
+google-cloud-libraries-bom = "26.83.0"
 jjwt = "0.13.0"
 spring-boot = "4.1.0"
 spring-dependency-management = "1.1.7"
@@ -7,6 +8,8 @@ springdoc = "3.1.0"
 [libraries]
 caffeine = { module = "com.github.ben-manes.caffeine:caffeine" }
 flyway-mysql = { module = "org.flywaydb:flyway-mysql" }
+google-cloud-libraries-bom = { module = "com.google.cloud:libraries-bom", version.ref = "google-cloud-libraries-bom" }
+google-cloud-speech = { module = "com.google.cloud:google-cloud-speech" }
 h2 = { module = "com.h2database:h2" }
 jjwt-api = { module = "io.jsonwebtoken:jjwt-api", version.ref = "jjwt" }
 jjwt-impl = { module = "io.jsonwebtoken:jjwt-impl", version.ref = "jjwt" }

@@ -18,7 +18,9 @@ repositories {
 }
 
 dependencies {
+	implementation(platform(libs.google.cloud.libraries.bom))
 	implementation(libs.caffeine)
+	implementation(libs.google.cloud.speech)
 	implementation(libs.spring.boot.starter.data.jpa)
 	implementation(libs.spring.boot.starter.flyway)
 	implementation(libs.spring.boot.starter.security)
