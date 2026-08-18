@@ -164,10 +164,10 @@ class OpenApiContractTest {
                 .andExpect(jsonPath("$['paths']['/api/context-analyses']['get']").exists())
                 .andExpect(jsonPath("$['paths']['/api/context-analyses/{analysisId}']['get']").exists())
                 .andExpect(jsonPath(
-                        "$['paths']['/api/context-analyses/{analysisId}/selection']['put']"
+                        "$['paths']['/api/context-analyses/{analysisId}/ambiguities/{ambiguityId}/selection']['put']"
                 ).exists())
                 .andExpect(jsonPath(
-                        "$['paths']['/api/context-analyses/{analysisId}/selection']['patch']"
+                        "$['paths']['/api/context-analyses/{analysisId}/ambiguities/{ambiguityId}/selection']['patch']"
                 ).exists());
     }
 }

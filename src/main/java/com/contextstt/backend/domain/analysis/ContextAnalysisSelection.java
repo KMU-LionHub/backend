@@ -29,8 +29,8 @@ public class ContextAnalysisSelection {
     private Long id;
 
     @OneToOne(fetch = FetchType.LAZY, optional = false)
-    @JoinColumn(name = "analysis_id", nullable = false, unique = true)
-    private ContextAnalysis analysis;
+    @JoinColumn(name = "ambiguity_id", nullable = false, unique = true)
+    private ContextAmbiguity ambiguity;
 
     @ManyToOne(fetch = FetchType.LAZY, optional = false)
     @JoinColumn(name = "candidate_id", nullable = false)
@@ -51,9 +51,9 @@ public class ContextAnalysisSelection {
     @Version
     private long version;
 
-    static ContextAnalysisSelection create(ContextAnalysis analysis, ContextCandidate candidate) {
+    static ContextAnalysisSelection create(ContextAmbiguity ambiguity, ContextCandidate candidate) {
         ContextAnalysisSelection selection = new ContextAnalysisSelection();
-        selection.analysis = analysis;
+        selection.ambiguity = ambiguity;
         selection.applyCandidate(candidate);
         return selection;
     }

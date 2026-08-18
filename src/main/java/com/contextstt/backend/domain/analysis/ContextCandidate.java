@@ -28,8 +28,8 @@ public class ContextCandidate {
     private Long id;
 
     @ManyToOne(fetch = FetchType.LAZY, optional = false)
-    @JoinColumn(name = "analysis_id", nullable = false)
-    private ContextAnalysis analysis;
+    @JoinColumn(name = "ambiguity_id", nullable = false)
+    private ContextAmbiguity ambiguity;
 
     @Column(nullable = false)
     private int candidateRank;
@@ -51,14 +51,14 @@ public class ContextCandidate {
 
     @Builder
     private ContextCandidate(
-            ContextAnalysis analysis,
+            ContextAmbiguity ambiguity,
             int candidateRank,
             String interpretation,
             String inferredIntent,
             String rationale,
             BigDecimal intentSimilarityScore
     ) {
-        this.analysis = analysis;
+        this.ambiguity = ambiguity;
         this.candidateRank = candidateRank;
         this.interpretation = interpretation;
         this.inferredIntent = inferredIntent;

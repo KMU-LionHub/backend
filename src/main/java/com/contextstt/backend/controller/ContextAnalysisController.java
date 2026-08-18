@@ -119,8 +119,8 @@ public class ContextAnalysisController {
     }
 
     @Operation(
-            summary = "맥락 후보 선택",
-            description = "화자의 의도와 가장 가까운 후보를 최종 맥락의 기준으로 선택합니다.",
+            summary = "모호성 구간의 맥락 후보 선택",
+            description = "특정 단어 구간에서 화자의 의도와 가장 가까운 후보를 선택합니다.",
             security = @SecurityRequirement(name = OpenApiConfig.BEARER_AUTH_SCHEME)
     )
     @ApiResponses({
@@ -136,18 +136,19 @@ public class ContextAnalysisController {
             @ApiResponse(responseCode = "409", description = "동시 선택 충돌",
                     content = @Content(schema = @Schema(implementation = ErrorResponse.class)))
     })
-    @PutMapping("/{analysisId}/selection")
+    @PutMapping("/{analysisId}/ambiguities/{ambiguityId}/selection")
     public ContextAnalysisResponse selectCandidate(
             @Parameter(hidden = true) @AuthenticationPrincipal CustomUserDetails principal,
             @PathVariable Long analysisId,
+            @PathVariable Long ambiguityId,
             @Valid @RequestBody SelectContextCandidateRequest request
     ) {
-        return analysisService.selectCandidate(principal.getUserId(), analysisId, request);
+        return analysisService.selectCandidate(principal.getUserId(), analysisId, ambiguityId, request);
     }
 
     @Operation(
-            summary = "선택 맥락 직접 수정",
-            description = "선택한 후보를 화자가 원하는 표현으로 수정합니다.",
+            summary = "모호성 구간의 선택 맥락 직접 수정",
+            description = "특정 단어 구간에서 선택한 후보를 화자가 원하는 표현으로 수정합니다.",
             security = @SecurityRequirement(name = OpenApiConfig.BEARER_AUTH_SCHEME)
     )
     @ApiResponses({
@@ -163,12 +164,13 @@ public class ContextAnalysisController {
             @ApiResponse(responseCode = "409", description = "선택된 후보 없음 또는 동시 수정 충돌",
                     content = @Content(schema = @Schema(implementation = ErrorResponse.class)))
     })
-    @PatchMapping("/{analysisId}/selection")
+    @PatchMapping("/{analysisId}/ambiguities/{ambiguityId}/selection")
     public ContextAnalysisResponse editSelection(
             @Parameter(hidden = true) @AuthenticationPrincipal CustomUserDetails principal,
             @PathVariable Long analysisId,
+            @PathVariable Long ambiguityId,
             @Valid @RequestBody EditContextSelectionRequest request
     ) {
-        return analysisService.editSelection(principal.getUserId(), analysisId, request);
+        return analysisService.editSelection(principal.getUserId(), analysisId, ambiguityId, request);
     }
 }

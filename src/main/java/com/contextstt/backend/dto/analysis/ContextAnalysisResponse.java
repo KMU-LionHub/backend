@@ -19,9 +19,10 @@ public record ContextAnalysisResponse(
         String sourceCurrentText,
         String provider,
         String model,
-        int candidateCount,
-        List<ContextCandidateResponse> candidates,
-        ContextAnalysisSelectionResponse selection,
+        int requestedCandidateCount,
+        int ambiguityCount,
+        boolean needsClarification,
+        List<ContextAmbiguityResponse> ambiguities,
         LocalDateTime createdAt,
         LocalDateTime updatedAt
 ) {
@@ -38,11 +39,12 @@ public record ContextAnalysisResponse(
                 .sourceCurrentText(analysis.getSourceCurrentText())
                 .provider(analysis.getProvider())
                 .model(analysis.getModel())
-                .candidateCount(analysis.getCandidateCount())
-                .candidates(analysis.getCandidates().stream()
-                        .map(candidate -> ContextCandidateResponse.from(candidate, analysis.getSelection()))
+                .requestedCandidateCount(analysis.getRequestedCandidateCount())
+                .ambiguityCount(analysis.getAmbiguityCount())
+                .needsClarification(analysis.getAmbiguityCount() > 0)
+                .ambiguities(analysis.getAmbiguities().stream()
+                        .map(ContextAmbiguityResponse::from)
                         .toList())
-                .selection(ContextAnalysisSelectionResponse.from(analysis.getSelection()))
                 .createdAt(analysis.getCreatedAt())
                 .updatedAt(analysis.getUpdatedAt())
                 .build();

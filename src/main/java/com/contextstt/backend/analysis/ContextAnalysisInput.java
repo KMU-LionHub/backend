@@ -10,12 +10,14 @@ public record ContextAnalysisInput(
         List<PreviousUtterance> previousUtterances,
         String targetSpeakerName,
         String targetOriginalText,
-        String targetCurrentText
+        String targetCurrentText,
+        List<AnalysisWord> targetWords
 ) {
 
     public ContextAnalysisInput {
         participants = List.copyOf(participants);
         previousUtterances = List.copyOf(previousUtterances);
+        targetWords = List.copyOf(targetWords);
     }
 
     public record AnalysisParticipant(
@@ -28,6 +30,12 @@ public record ContextAnalysisInput(
     public record PreviousUtterance(
             int order,
             String speakerName,
+            String text
+    ) {
+    }
+
+    public record AnalysisWord(
+            int order,
             String text
     ) {
     }

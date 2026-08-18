@@ -13,6 +13,8 @@
 
 분석 입력에는 대화 배경, 참여자, 이전에 확정된 발언, 대상 발언의 STT 원문과 현재 교정문이 포함됩니다. 기존 분석 결과는 당시 입력의 스냅샷이며 이후 전사 수정에 따라 자동으로 변경되지 않습니다.
 
+분석 결과는 단어 ID와 order로 연결된 `ambiguities` 배열입니다. 맥락이 충분히 명확하면 `needsClarification`은 `false`, `ambiguities`는 빈 배열입니다. 한 발언에 여러 모호성 구간이 있으면 각 구간마다 독립적인 후보와 선택 결과가 생성됩니다.
+
 ## API
 
 | 기능 | 메서드 | 경로 |
@@ -20,8 +22,8 @@
 | 분석 생성 | `POST` | `/api/context-analyses` |
 | 분석 상세 조회 | `GET` | `/api/context-analyses/{analysisId}` |
 | 발언별 분석 이력 | `GET` | `/api/context-analyses?conversationId={id}&utteranceId={id}` |
-| 후보 선택 | `PUT` | `/api/context-analyses/{analysisId}/selection` |
-| 선택 문구 수정 | `PATCH` | `/api/context-analyses/{analysisId}/selection` |
+| 구간별 후보 선택 | `PUT` | `/api/context-analyses/{analysisId}/ambiguities/{ambiguityId}/selection` |
+| 구간별 선택 문구 수정 | `PATCH` | `/api/context-analyses/{analysisId}/ambiguities/{ambiguityId}/selection` |
 
 모든 API에는 Bearer access token이 필요합니다.
 
@@ -42,7 +44,7 @@ Content-Type: application/json
 }
 ```
 
-`candidateCount`는 생략하면 3이며 2에서 5 사이여야 합니다. 현재 요청은 선택한 모델의 응답이 완료될 때까지 기다리는 동기 방식입니다.
+`candidateCount`는 모호성 구간마다 생성할 후보 수입니다. 생략하면 3이며 2에서 5 사이여야 합니다. 현재 요청은 선택한 모델의 응답이 완료될 때까지 기다리는 동기 방식입니다.
 
 `model`을 생략하면 `CLAUDE_SONNET_5`를 사용합니다. 임의 모델 문자열은 허용하지 않으며 다음 값만 선택할 수 있습니다.
 

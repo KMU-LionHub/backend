@@ -3,8 +3,7 @@ package com.contextstt.backend.domain.analysis;
 import com.contextstt.backend.domain.conversation.Conversation;
 import com.contextstt.backend.domain.conversation.ConversationUtterance;
 import com.contextstt.backend.domain.transcription.Transcription;
-import com.contextstt.backend.exception.ContextCandidateNotFoundException;
-import com.contextstt.backend.exception.ResourceConflictException;
+import com.contextstt.backend.exception.ContextAmbiguityNotFoundException;
 import jakarta.persistence.CascadeType;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
@@ -15,13 +14,11 @@ import jakarta.persistence.Id;
 import jakarta.persistence.JoinColumn;
 import jakarta.persistence.ManyToOne;
 import jakarta.persistence.OneToMany;
-import jakarta.persistence.OneToOne;
 import jakarta.persistence.OrderBy;
 import jakarta.persistence.PrePersist;
 import jakarta.persistence.PreUpdate;
 import jakarta.persistence.Table;
 import jakarta.persistence.Version;
-import java.math.BigDecimal;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.List;
@@ -71,14 +68,14 @@ public class ContextAnalysis {
     private String sourceCurrentText;
 
     @Column(nullable = false)
-    private int candidateCount;
+    private int requestedCandidateCount;
 
     @OneToMany(mappedBy = "analysis", cascade = CascadeType.ALL, orphanRemoval = true)
-    @OrderBy("candidateRank ASC")
-    private List<ContextCandidate> candidates = new ArrayList<>();
+    @OrderBy("ambiguityOrder ASC")
+    private List<ContextAmbiguity> ambiguities = new ArrayList<>();
 
-    @OneToOne(mappedBy = "analysis", cascade = CascadeType.ALL, orphanRemoval = true, fetch = FetchType.LAZY)
-    private ContextAnalysisSelection selection;
+    @Column(nullable = false)
+    private int ambiguityCount;
 
     @Version
     private long version;
@@ -99,7 +96,8 @@ public class ContextAnalysis {
             String sourceSpeakerName,
             String conversationContext,
             String sourceOriginalText,
-            String sourceCurrentText
+            String sourceCurrentText,
+            int requestedCandidateCount
     ) {
         this.conversation = conversation;
         this.utterance = utterance;
@@ -110,52 +108,49 @@ public class ContextAnalysis {
         this.conversationContext = conversationContext;
         this.sourceOriginalText = sourceOriginalText;
         this.sourceCurrentText = sourceCurrentText;
+        this.requestedCandidateCount = requestedCandidateCount;
     }
 
-    public void addCandidate(
-            int rank,
-            String interpretation,
-            String inferredIntent,
-            String rationale,
-            BigDecimal intentSimilarityScore
+    public ContextAmbiguity addAmbiguity(
+            int order,
+            String excerpt,
+            Long startWordId,
+            Long endWordId,
+            Integer startWordOrder,
+            Integer endWordOrder
     ) {
-        ContextCandidate candidate = ContextCandidate.builder()
+        ContextAmbiguity ambiguity = ContextAmbiguity.builder()
                 .analysis(this)
-                .candidateRank(rank)
-                .interpretation(interpretation)
-                .inferredIntent(inferredIntent)
-                .rationale(rationale)
-                .intentSimilarityScore(intentSimilarityScore)
+                .ambiguityOrder(order)
+                .excerpt(excerpt)
+                .startWordId(startWordId)
+                .endWordId(endWordId)
+                .startWordOrder(startWordOrder)
+                .endWordOrder(endWordOrder)
                 .build();
-        candidates.add(candidate);
-        candidateCount = candidates.size();
+        ambiguities.add(ambiguity);
+        ambiguityCount = ambiguities.size();
+        return ambiguity;
     }
 
-    public ContextAnalysisSelection selectCandidate(Long candidateId) {
-        ContextCandidate candidate = candidates.stream()
-                .filter(item -> item.getId().equals(candidateId))
+    public ContextAmbiguity findAmbiguity(Long ambiguityId) {
+        return ambiguities.stream()
+                .filter(item -> item.getId().equals(ambiguityId))
                 .findFirst()
-                .orElseThrow(ContextCandidateNotFoundException::new);
-
-        if (selection == null) {
-            selection = ContextAnalysisSelection.create(this, candidate);
-        } else {
-            selection.changeCandidate(candidate);
-        }
-        touch();
-        return selection;
+                .orElseThrow(ContextAmbiguityNotFoundException::new);
     }
 
-    public ContextAnalysisSelection editSelection(String text) {
-        if (selection == null) {
-            throw new ResourceConflictException("먼저 맥락 후보를 선택해 주세요.");
-        }
-        selection.edit(text);
-        touch();
-        return selection;
+    public int getResolvedAmbiguityCount() {
+        return (int) ambiguities.stream()
+                .filter(ambiguity -> ambiguity.getSelection() != null)
+                .count();
     }
 
-    private void touch() {
+    public boolean isFullyResolved() {
+        return ambiguities.stream().allMatch(ambiguity -> ambiguity.getSelection() != null);
+    }
+
+    void touch() {
         updatedAt = LocalDateTime.now();
     }
 

@@ -62,7 +62,8 @@ class RoutingContextAnalysisGatewayTest {
                 List.of(),
                 "화자",
                 "원문",
-                "현재 문장"
+                "현재 문장",
+                List.of(new ContextAnalysisInput.AnalysisWord(0, "현재 문장"))
         );
     }
 }

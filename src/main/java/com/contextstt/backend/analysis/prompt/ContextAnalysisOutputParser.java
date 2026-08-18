@@ -1,7 +1,7 @@
 package com.contextstt.backend.analysis.prompt;
 
 import com.contextstt.backend.analysis.ContextAnalysisResult;
-import com.contextstt.backend.analysis.GeneratedContextCandidate;
+import com.contextstt.backend.analysis.GeneratedContextAmbiguity;
 import com.contextstt.backend.exception.InvalidAnalysisResultException;
 import java.util.List;
 import lombok.RequiredArgsConstructor;
@@ -30,7 +30,7 @@ public class ContextAnalysisOutputParser {
         if (payload == null) {
             throw new InvalidAnalysisResultException("AI 분석 응답이 비어 있습니다.");
         }
-        return new ContextAnalysisResult(provider, model, payload.candidates());
+        return new ContextAnalysisResult(provider, model, payload.ambiguities());
     }
 
     private String stripCodeFence(String text) {
@@ -42,6 +42,6 @@ public class ContextAnalysisOutputParser {
         return trimmed.trim();
     }
 
-    private record ContextAnalysisPayload(List<GeneratedContextCandidate> candidates) {
+    private record ContextAnalysisPayload(List<GeneratedContextAmbiguity> ambiguities) {
     }
 }

@@ -1,6 +1,7 @@
 package com.contextstt.backend.analysis;
 
 import com.contextstt.backend.analysis.ContextAnalysisInput.AnalysisParticipant;
+import com.contextstt.backend.analysis.ContextAnalysisInput.AnalysisWord;
 import com.contextstt.backend.analysis.ContextAnalysisInput.PreviousUtterance;
 import com.contextstt.backend.domain.conversation.Conversation;
 import com.contextstt.backend.domain.conversation.ConversationRepository;
@@ -61,7 +62,10 @@ public class ContextAnalysisSourceLoader {
                 previousUtterances,
                 target.getSpeaker().getDisplayName(),
                 transcription.getOriginalText(),
-                transcription.getCurrentText()
+                transcription.getCurrentText(),
+                transcription.getWords().stream()
+                        .map(word -> new AnalysisWord(word.getWordOrder(), word.getCurrentText()))
+                        .toList()
         );
         return new ContextAnalysisSource(conversation, target, transcription, input);
     }
