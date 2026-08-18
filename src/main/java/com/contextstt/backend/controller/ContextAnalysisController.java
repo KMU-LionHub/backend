@@ -5,12 +5,14 @@ import com.contextstt.backend.dto.analysis.ContextAnalysisHistoryResponse;
 import com.contextstt.backend.dto.analysis.ContextAnalysisResponse;
 import com.contextstt.backend.dto.analysis.CreateContextAnalysisRequest;
 import com.contextstt.backend.dto.analysis.EditContextSelectionRequest;
+import com.contextstt.backend.dto.analysis.ResolveContextAmbiguityRequest;
 import com.contextstt.backend.dto.analysis.SelectContextCandidateRequest;
 import com.contextstt.backend.exception.ErrorResponse;
 import com.contextstt.backend.security.CustomUserDetails;
 import com.contextstt.backend.service.ContextAnalysisService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
+import io.swagger.v3.oas.annotations.headers.Header;
 import io.swagger.v3.oas.annotations.media.Content;
 import io.swagger.v3.oas.annotations.media.Schema;
 import io.swagger.v3.oas.annotations.responses.ApiResponse;
@@ -62,6 +64,13 @@ public class ContextAnalysisController {
             @ApiResponse(responseCode = "502", description = "분석 제공자의 잘못된 응답",
                     content = @Content(schema = @Schema(implementation = ErrorResponse.class))),
             @ApiResponse(responseCode = "503", description = "분석 제공자 미설정 또는 장애",
+                    content = @Content(schema = @Schema(implementation = ErrorResponse.class))),
+            @ApiResponse(responseCode = "429", description = "사용자별 분석 요청 한도 초과",
+                    headers = @Header(
+                            name = "Retry-After",
+                            description = "다시 요청할 수 있을 때까지 남은 초",
+                            schema = @Schema(type = "integer", format = "int64")
+                    ),
                     content = @Content(schema = @Schema(implementation = ErrorResponse.class)))
     })
     @PostMapping
@@ -119,8 +128,8 @@ public class ContextAnalysisController {
     }
 
     @Operation(
-            summary = "맥락 후보 선택",
-            description = "화자의 의도와 가장 가까운 후보를 최종 맥락의 기준으로 선택합니다.",
+            summary = "모호성 구간의 맥락 후보 선택",
+            description = "특정 단어 구간에서 화자의 의도와 가장 가까운 후보를 선택합니다.",
             security = @SecurityRequirement(name = OpenApiConfig.BEARER_AUTH_SCHEME)
     )
     @ApiResponses({
@@ -136,18 +145,19 @@ public class ContextAnalysisController {
             @ApiResponse(responseCode = "409", description = "동시 선택 충돌",
                     content = @Content(schema = @Schema(implementation = ErrorResponse.class)))
     })
-    @PutMapping("/{analysisId}/selection")
+    @PutMapping("/{analysisId}/ambiguities/{ambiguityId}/selection")
     public ContextAnalysisResponse selectCandidate(
             @Parameter(hidden = true) @AuthenticationPrincipal CustomUserDetails principal,
             @PathVariable Long analysisId,
+            @PathVariable Long ambiguityId,
             @Valid @RequestBody SelectContextCandidateRequest request
     ) {
-        return analysisService.selectCandidate(principal.getUserId(), analysisId, request);
+        return analysisService.selectCandidate(principal.getUserId(), analysisId, ambiguityId, request);
     }
 
     @Operation(
-            summary = "선택 맥락 직접 수정",
-            description = "선택한 후보를 화자가 원하는 표현으로 수정합니다.",
+            summary = "모호성 구간의 선택 맥락 직접 수정",
+            description = "특정 단어 구간에서 선택한 후보를 화자가 원하는 표현으로 수정합니다.",
             security = @SecurityRequirement(name = OpenApiConfig.BEARER_AUTH_SCHEME)
     )
     @ApiResponses({
@@ -163,12 +173,41 @@ public class ContextAnalysisController {
             @ApiResponse(responseCode = "409", description = "선택된 후보 없음 또는 동시 수정 충돌",
                     content = @Content(schema = @Schema(implementation = ErrorResponse.class)))
     })
-    @PatchMapping("/{analysisId}/selection")
+    @PatchMapping("/{analysisId}/ambiguities/{ambiguityId}/selection")
     public ContextAnalysisResponse editSelection(
             @Parameter(hidden = true) @AuthenticationPrincipal CustomUserDetails principal,
             @PathVariable Long analysisId,
+            @PathVariable Long ambiguityId,
             @Valid @RequestBody EditContextSelectionRequest request
     ) {
-        return analysisService.editSelection(principal.getUserId(), analysisId, request);
+        return analysisService.editSelection(principal.getUserId(), analysisId, ambiguityId, request);
+    }
+
+    @Operation(
+            summary = "모호성 구간 확정",
+            description = "AI 후보 선택, 직접 입력 또는 모호성 무시 중 하나로 구간을 확정합니다.",
+            security = @SecurityRequirement(name = OpenApiConfig.BEARER_AUTH_SCHEME)
+    )
+    @ApiResponses({
+            @ApiResponse(responseCode = "200", description = "확정 성공",
+                    content = @Content(mediaType = MediaType.APPLICATION_JSON_VALUE,
+                            schema = @Schema(implementation = ContextAnalysisResponse.class))),
+            @ApiResponse(responseCode = "400", description = "확정 유형과 요청 값 불일치",
+                    content = @Content(schema = @Schema(implementation = ErrorResponse.class))),
+            @ApiResponse(responseCode = "401", description = "인증 필요",
+                    content = @Content(schema = @Schema(implementation = ErrorResponse.class))),
+            @ApiResponse(responseCode = "404", description = "분석 결과, 모호성 구간 또는 후보 없음",
+                    content = @Content(schema = @Schema(implementation = ErrorResponse.class))),
+            @ApiResponse(responseCode = "409", description = "분석 이후 전사 변경 또는 동시 수정 충돌",
+                    content = @Content(schema = @Schema(implementation = ErrorResponse.class)))
+    })
+    @PutMapping("/{analysisId}/ambiguities/{ambiguityId}/resolution")
+    public ContextAnalysisResponse resolve(
+            @Parameter(hidden = true) @AuthenticationPrincipal CustomUserDetails principal,
+            @PathVariable Long analysisId,
+            @PathVariable Long ambiguityId,
+            @Valid @RequestBody ResolveContextAmbiguityRequest request
+    ) {
+        return analysisService.resolve(principal.getUserId(), analysisId, ambiguityId, request);
     }
 }

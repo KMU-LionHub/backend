@@ -5,6 +5,8 @@ import java.util.Map;
 
 public final class ContextAnalysisJsonSchema {
 
+    private static final int MAX_AMBIGUITY_COUNT = 5;
+
     private ContextAnalysisJsonSchema() {
     }
 
@@ -37,10 +39,26 @@ public final class ContextAnalysisJsonSchema {
                 "minItems", candidateCount,
                 "maxItems", candidateCount
         );
+        Map<String, Object> ambiguity = Map.of(
+                "type", "object",
+                "properties", Map.of(
+                        "startWordOrder", Map.of("type", "integer", "minimum", 0),
+                        "endWordOrder", Map.of("type", "integer", "minimum", 0),
+                        "candidates", candidates
+                ),
+                "required", List.of("startWordOrder", "endWordOrder", "candidates"),
+                "additionalProperties", false
+        );
+        Map<String, Object> ambiguities = Map.of(
+                "type", "array",
+                "items", ambiguity,
+                "minItems", 0,
+                "maxItems", MAX_AMBIGUITY_COUNT
+        );
         return Map.of(
                 "type", "object",
-                "properties", Map.of("candidates", candidates),
-                "required", List.of("candidates"),
+                "properties", Map.of("ambiguities", ambiguities),
+                "required", List.of("ambiguities"),
                 "additionalProperties", false
         );
     }

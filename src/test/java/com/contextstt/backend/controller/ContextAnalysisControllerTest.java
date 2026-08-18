@@ -17,6 +17,7 @@ import com.contextstt.backend.analysis.ContextAnalysisGateway;
 import com.contextstt.backend.analysis.ContextAnalysisInput;
 import com.contextstt.backend.analysis.ContextAnalysisModel;
 import com.contextstt.backend.analysis.ContextAnalysisResult;
+import com.contextstt.backend.analysis.GeneratedContextAmbiguity;
 import com.contextstt.backend.analysis.GeneratedContextCandidate;
 import com.contextstt.backend.domain.user.User;
 import com.contextstt.backend.domain.user.UserRepository;
@@ -109,18 +110,25 @@ class ContextAnalysisControllerTest {
                 .andExpect(jsonPath("$.model").value("context-test-v1"))
                 .andExpect(jsonPath("$.sourceOriginalText").value("일정을 좀 바야 할 것 같아"))
                 .andExpect(jsonPath("$.sourceCurrentText").value("일정을 좀 봐야 할 것 같아"))
-                .andExpect(jsonPath("$.candidateCount").value(3))
-                .andExpect(jsonPath("$.candidates.length()").value(3))
-                .andExpect(jsonPath("$.candidates[0].rank").value(1))
-                .andExpect(jsonPath("$.candidates[0].interpretation").value("일정을 확인한 뒤 답하려는 의미"))
-                .andExpect(jsonPath("$.candidates[0].intentSimilarityScore").value(0.91))
-                .andExpect(jsonPath("$.candidates[1].intentSimilarityScore").value(0.72))
-                .andExpect(jsonPath("$.candidates[2].intentSimilarityScore").value(0.55))
-                .andExpect(jsonPath("$.selection").doesNotExist())
+                .andExpect(jsonPath("$.requestedCandidateCount").value(3))
+                .andExpect(jsonPath("$.ambiguityCount").value(1))
+                .andExpect(jsonPath("$.needsClarification").value(true))
+                .andExpect(jsonPath("$.ambiguities[0].excerpt").value("일정을"))
+                .andExpect(jsonPath("$.ambiguities[0].startWordOrder").value(0))
+                .andExpect(jsonPath("$.ambiguities[0].endWordOrder").value(0))
+                .andExpect(jsonPath("$.ambiguities[0].candidates.length()").value(3))
+                .andExpect(jsonPath("$.ambiguities[0].candidates[0].rank").value(1))
+                .andExpect(jsonPath("$.ambiguities[0].candidates[0].interpretation")
+                        .value("일정을 확인한 뒤 답하려는 의미"))
+                .andExpect(jsonPath("$.ambiguities[0].candidates[0].intentSimilarityScore").value(0.91))
+                .andExpect(jsonPath("$.ambiguities[0].candidates[1].intentSimilarityScore").value(0.72))
+                .andExpect(jsonPath("$.ambiguities[0].candidates[2].intentSimilarityScore").value(0.55))
+                .andExpect(jsonPath("$.ambiguities[0].selection").doesNotExist())
                 .andReturn();
 
         Number analysisId = jsonNumber(created, "$.id");
-        Number firstCandidateId = jsonNumber(created, "$.candidates[0].id");
+        Number ambiguityId = jsonNumber(created, "$.ambiguities[0].id");
+        Number firstCandidateId = jsonNumber(created, "$.ambiguities[0].candidates[0].id");
 
         ArgumentCaptor<ContextAnalysisInput> inputCaptor = ArgumentCaptor.forClass(ContextAnalysisInput.class);
         verify(analysisGateway).analyze(
@@ -134,34 +142,48 @@ class ContextAnalysisControllerTest {
         org.assertj.core.api.Assertions.assertThat(input.previousUtterances())
                 .extracting(ContextAnalysisInput.PreviousUtterance::text)
                 .containsExactly("이번 주말에 만날래?");
+        org.assertj.core.api.Assertions.assertThat(input.omittedPreviousUtteranceCount()).isZero();
         org.assertj.core.api.Assertions.assertThat(input.targetSpeakerName()).isEqualTo("분석 사용자");
         org.assertj.core.api.Assertions.assertThat(input.targetOriginalText()).isEqualTo("일정을 좀 바야 할 것 같아");
         org.assertj.core.api.Assertions.assertThat(input.targetCurrentText()).isEqualTo("일정을 좀 봐야 할 것 같아");
+        org.assertj.core.api.Assertions.assertThat(input.targetWords())
+                .extracting(ContextAnalysisInput.AnalysisWord::text)
+                .containsExactly("일정을", "좀", "봐야", "할", "것", "같아");
 
-        mockMvc.perform(put("/api/context-analyses/{analysisId}/selection", analysisId.longValue())
+        mockMvc.perform(put(
+                        "/api/context-analyses/{analysisId}/ambiguities/{ambiguityId}/selection",
+                        analysisId.longValue(),
+                        ambiguityId.longValue()
+                )
                         .header("Authorization", bearer(owner.token()))
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("{\"candidateId\":" + firstCandidateId.longValue() + "}"))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$.selection.candidateId").value(firstCandidateId.intValue()))
-                .andExpect(jsonPath("$.selection.finalText").value("일정을 확인한 뒤 답하려는 의미"))
-                .andExpect(jsonPath("$.selection.edited").value(false))
-                .andExpect(jsonPath("$.candidates[0].selected").value(true));
+                .andExpect(jsonPath("$.ambiguities[0].selection.candidateId")
+                        .value(firstCandidateId.intValue()))
+                .andExpect(jsonPath("$.ambiguities[0].selection.finalText")
+                        .value("일정을 확인한 뒤 답하려는 의미"))
+                .andExpect(jsonPath("$.ambiguities[0].selection.edited").value(false))
+                .andExpect(jsonPath("$.ambiguities[0].candidates[0].selected").value(true));
 
-        mockMvc.perform(patch("/api/context-analyses/{analysisId}/selection", analysisId.longValue())
+        mockMvc.perform(patch(
+                        "/api/context-analyses/{analysisId}/ambiguities/{ambiguityId}/selection",
+                        analysisId.longValue(),
+                        ambiguityId.longValue()
+                )
                         .header("Authorization", bearer(owner.token()))
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("{\"text\":\"거절하려는 것이 아니라 일정을 확인한 뒤 답하려는 뜻\"}"))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$.selection.finalText")
+                .andExpect(jsonPath("$.ambiguities[0].selection.finalText")
                         .value("거절하려는 것이 아니라 일정을 확인한 뒤 답하려는 뜻"))
-                .andExpect(jsonPath("$.selection.edited").value(true));
+                .andExpect(jsonPath("$.ambiguities[0].selection.edited").value(true));
 
         mockMvc.perform(get("/api/context-analyses/{analysisId}", analysisId.longValue())
                         .header("Authorization", bearer(owner.token())))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$.candidates.length()").value(3))
-                .andExpect(jsonPath("$.selection.edited").value(true));
+                .andExpect(jsonPath("$.ambiguities[0].candidates.length()").value(3))
+                .andExpect(jsonPath("$.ambiguities[0].selection.edited").value(true));
 
         mockMvc.perform(get("/api/context-analyses")
                         .param("conversationId", conversation.id().toString())
@@ -170,8 +192,9 @@ class ContextAnalysisControllerTest {
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.analyses.length()").value(1))
                 .andExpect(jsonPath("$.analyses[0].id").value(analysisId.intValue()))
-                .andExpect(jsonPath("$.analyses[0].selectedContext")
-                        .value("거절하려는 것이 아니라 일정을 확인한 뒤 답하려는 뜻"));
+                .andExpect(jsonPath("$.analyses[0].ambiguityCount").value(1))
+                .andExpect(jsonPath("$.analyses[0].resolvedAmbiguityCount").value(1))
+                .andExpect(jsonPath("$.analyses[0].fullyResolved").value(true));
     }
 
     @Test
@@ -187,9 +210,14 @@ class ContextAnalysisControllerTest {
         ))
                 .thenReturn(validAnalysisResult());
 
-        analyze(owner.token(), conversation.id(), draft.id(), 3)
+        MvcResult analysis = analyze(owner.token(), conversation.id(), draft.id(), 3)
                 .andExpect(status().isCreated())
-                .andExpect(jsonPath("$.sourceCurrentText").value("아직 확정하지 않은 발언"));
+                .andExpect(jsonPath("$.sourceCurrentText").value("아직 확정하지 않은 발언"))
+                .andExpect(jsonPath("$.stale").value(false))
+                .andReturn();
+        Number analysisId = jsonNumber(analysis, "$.id");
+        Number ambiguityId = jsonNumber(analysis, "$.ambiguities[0].id");
+        Number candidateId = jsonNumber(analysis, "$.ambiguities[0].candidates[0].id");
 
         MvcResult transcription = mockMvc.perform(get(
                         "/api/stt/transcriptions/{transcriptionId}",
@@ -208,6 +236,96 @@ class ContextAnalysisControllerTest {
                         .content("{\"text\":\"아직은\"}"))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.currentText").value("아직은 확정하지 않은 발언"));
+
+        mockMvc.perform(put(
+                        "/api/context-analyses/{analysisId}/ambiguities/{ambiguityId}/selection",
+                        analysisId.longValue(),
+                        ambiguityId.longValue()
+                ).header("Authorization", bearer(owner.token()))
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"candidateId\":" + candidateId.longValue() + "}"))
+                .andExpect(status().isConflict())
+                .andExpect(jsonPath("$.message")
+                        .value("분석 이후 전사가 변경되었습니다. 현재 발언으로 다시 분석해 주세요."));
+
+        mockMvc.perform(get("/api/context-analyses/{analysisId}", analysisId.longValue())
+                        .header("Authorization", bearer(owner.token())))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.stale").value(true))
+                .andExpect(jsonPath("$.usableResolution").value(false));
+    }
+
+    @Test
+    void returnsEmptyAmbiguitiesForClearUtterance() throws Exception {
+        UserToken owner = userToken("명확한 발언 사용자");
+        ConversationSetup conversation = createConversation(owner.token());
+        UtteranceSetup utterance = createUtterance(owner.token(), conversation, "내일 오후 세 시에 만나자");
+        when(analysisGateway.analyze(
+                any(ContextAnalysisInput.class),
+                eq(3),
+                eq(ContextAnalysisModel.CLAUDE_SONNET_5)
+        )).thenReturn(new ContextAnalysisResult("TEST_AI", "context-test-v1", List.of()));
+
+        analyze(owner.token(), conversation.id(), utterance.id(), 3)
+                .andExpect(status().isCreated())
+                .andExpect(jsonPath("$.needsClarification").value(false))
+                .andExpect(jsonPath("$.ambiguityCount").value(0))
+                .andExpect(jsonPath("$.ambiguities").isEmpty());
+    }
+
+    @Test
+    void resolvesAmbiguityWithCustomTextOrDismissal() throws Exception {
+        UserToken owner = userToken("직접 확정 사용자");
+        ConversationSetup conversation = createConversation(owner.token());
+        UtteranceSetup utterance = createUtterance(owner.token(), conversation, "그거 내일까지 부탁해");
+        when(analysisGateway.analyze(
+                any(ContextAnalysisInput.class),
+                eq(3),
+                eq(ContextAnalysisModel.CLAUDE_SONNET_5)
+        )).thenReturn(validAnalysisResult());
+        MvcResult created = analyze(owner.token(), conversation.id(), utterance.id(), 3)
+                .andExpect(status().isCreated())
+                .andReturn();
+        Number analysisId = jsonNumber(created, "$.id");
+        Number ambiguityId = jsonNumber(created, "$.ambiguities[0].id");
+
+        mockMvc.perform(put(
+                        "/api/context-analyses/{analysisId}/ambiguities/{ambiguityId}/resolution",
+                        analysisId.longValue(),
+                        ambiguityId.longValue()
+                ).header("Authorization", bearer(owner.token()))
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {"type":"CUSTOM","text":"주간 보고서를 내일까지 작성해 달라는 뜻"}
+                                """))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.ambiguities[0].selection.type").value("CUSTOM"))
+                .andExpect(jsonPath("$.ambiguities[0].selection.candidateId").doesNotExist())
+                .andExpect(jsonPath("$.ambiguities[0].selection.finalText")
+                        .value("주간 보고서를 내일까지 작성해 달라는 뜻"))
+                .andExpect(jsonPath("$.fullyResolved").value(true))
+                .andExpect(jsonPath("$.usableResolution").value(true));
+
+        mockMvc.perform(put(
+                        "/api/context-analyses/{analysisId}/ambiguities/{ambiguityId}/resolution",
+                        analysisId.longValue(),
+                        ambiguityId.longValue()
+                ).header("Authorization", bearer(owner.token()))
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"type\":\"DISMISSED\"}"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.ambiguities[0].selection.type").value("DISMISSED"))
+                .andExpect(jsonPath("$.ambiguities[0].selection.finalText").doesNotExist())
+                .andExpect(jsonPath("$.fullyResolved").value(true));
+
+        mockMvc.perform(put(
+                        "/api/context-analyses/{analysisId}/ambiguities/{ambiguityId}/resolution",
+                        analysisId.longValue(),
+                        ambiguityId.longValue()
+                ).header("Authorization", bearer(owner.token()))
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"type\":\"CUSTOM\",\"candidateId\":1,\"text\":\"잘못된 조합\"}"))
+                .andExpect(status().isBadRequest());
     }
 
     @Test
@@ -218,7 +336,7 @@ class ContextAnalysisControllerTest {
         ContextAnalysisResult openRouterResult = new ContextAnalysisResult(
                 "OPENROUTER",
                 "google/gemini-3.7-flash",
-                validAnalysisResult().candidates()
+                validAnalysisResult().ambiguities()
         );
 
         when(analysisGateway.analyze(
@@ -315,8 +433,29 @@ class ContextAnalysisControllerTest {
                 .thenReturn(new ContextAnalysisResult(
                         "TEST_AI",
                         "broken-model",
-                        List.of(candidate("후보 하나", "의도", "근거", "0.5"))
+                        List.of(new GeneratedContextAmbiguity(
+                                0,
+                                0,
+                                List.of(candidate("후보 하나", "의도", "근거", "0.5"))
+                        ))
                 ));
+        analyze(owner.token(), conversation.id(), target.id(), 3)
+                .andExpect(status().isBadGateway())
+                .andExpect(jsonPath("$.message").value("맥락 분석 제공자가 올바르지 않은 결과를 반환했습니다."));
+
+        when(analysisGateway.analyze(
+                any(ContextAnalysisInput.class),
+                eq(3),
+                eq(ContextAnalysisModel.CLAUDE_SONNET_5)
+        )).thenReturn(new ContextAnalysisResult(
+                "TEST_AI",
+                "broken-model",
+                List.of(new GeneratedContextAmbiguity(
+                        999,
+                        999,
+                        validAnalysisResult().ambiguities().getFirst().candidates()
+                ))
+        ));
         analyze(owner.token(), conversation.id(), target.id(), 3)
                 .andExpect(status().isBadGateway())
                 .andExpect(jsonPath("$.message").value("맥락 분석 제공자가 올바르지 않은 결과를 반환했습니다."));
@@ -349,15 +488,24 @@ class ContextAnalysisControllerTest {
                 .andExpect(status().isCreated())
                 .andReturn();
         Number analysisId = jsonNumber(created, "$.id");
+        Number ambiguityId = jsonNumber(created, "$.ambiguities[0].id");
 
-        mockMvc.perform(patch("/api/context-analyses/{analysisId}/selection", analysisId.longValue())
+        mockMvc.perform(patch(
+                        "/api/context-analyses/{analysisId}/ambiguities/{ambiguityId}/selection",
+                        analysisId.longValue(),
+                        ambiguityId.longValue()
+                )
                         .header("Authorization", bearer(owner.token()))
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("{\"text\":\"직접 수정\"}"))
                 .andExpect(status().isConflict())
                 .andExpect(jsonPath("$.message").value("먼저 맥락 후보를 선택해 주세요."));
 
-        mockMvc.perform(put("/api/context-analyses/{analysisId}/selection", analysisId.longValue())
+        mockMvc.perform(put(
+                        "/api/context-analyses/{analysisId}/ambiguities/{ambiguityId}/selection",
+                        analysisId.longValue(),
+                        ambiguityId.longValue()
+                )
                         .header("Authorization", bearer(owner.token()))
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("{\"candidateId\":999999}"))
@@ -455,9 +603,15 @@ class ContextAnalysisControllerTest {
                 "TEST_AI",
                 "context-test-v1",
                 List.of(
-                        candidate("완곡하게 거절하려는 의미", "만남 거절", "답변을 미루는 표현", "0.55"),
-                        candidate("일정을 확인한 뒤 답하려는 의미", "일정 확인", "명시적으로 일정을 보겠다고 말함", "0.91"),
-                        candidate("다른 날짜를 제안하려는 의미", "일정 변경", "현재 일정이 어려울 가능성", "0.72")
+                        new GeneratedContextAmbiguity(
+                                0,
+                                0,
+                                List.of(
+                                        candidate("완곡하게 거절하려는 의미", "만남 거절", "답변을 미루는 표현", "0.55"),
+                                        candidate("일정을 확인한 뒤 답하려는 의미", "일정 확인", "명시적으로 일정을 보겠다고 말함", "0.91"),
+                                        candidate("다른 날짜를 제안하려는 의미", "일정 변경", "현재 일정이 어려울 가능성", "0.72")
+                                )
+                        )
                 )
         );
     }

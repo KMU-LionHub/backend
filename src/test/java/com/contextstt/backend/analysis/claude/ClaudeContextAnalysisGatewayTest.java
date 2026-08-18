@@ -76,10 +76,12 @@ class ClaudeContextAnalysisGatewayTest {
 
         assertThat(result.provider()).isEqualTo("ANTHROPIC");
         assertThat(result.model()).isEqualTo("claude-test-model");
-        assertThat(result.candidates()).hasSize(2);
-        assertThat(result.candidates().getFirst().interpretation())
+        assertThat(result.ambiguities()).hasSize(1);
+        assertThat(result.ambiguities().getFirst().startWordOrder()).isZero();
+        assertThat(result.ambiguities().getFirst().candidates()).hasSize(2);
+        assertThat(result.ambiguities().getFirst().candidates().getFirst().interpretation())
                 .isEqualTo("일정을 확인한 뒤 답하려는 의미");
-        assertThat(result.candidates().getFirst().intentSimilarityScore())
+        assertThat(result.ambiguities().getFirst().candidates().getFirst().intentSimilarityScore())
                 .isEqualByComparingTo(new BigDecimal("0.91"));
         server.verify();
     }
@@ -138,26 +140,41 @@ class ClaudeContextAnalysisGatewayTest {
                         new AnalysisParticipant(2L, "친구", false)
                 ),
                 List.of(new PreviousUtterance(0, "친구", "이번 주말에 만날래?")),
+                0,
                 "화자",
                 "일정을 좀 바야 할 것 같아",
-                "일정을 좀 봐야 할 것 같아"
+                "일정을 좀 봐야 할 것 같아",
+                List.of(
+                        new ContextAnalysisInput.AnalysisWord(0, "일정을"),
+                        new ContextAnalysisInput.AnalysisWord(1, "좀"),
+                        new ContextAnalysisInput.AnalysisWord(2, "봐야"),
+                        new ContextAnalysisInput.AnalysisWord(3, "할"),
+                        new ContextAnalysisInput.AnalysisWord(4, "것"),
+                        new ContextAnalysisInput.AnalysisWord(5, "같아")
+                )
         );
     }
 
     private String successResponse() {
         String payload = """
-                {"candidates":[
+                {"ambiguities":[
                   {
-                    "interpretation":"일정을 확인한 뒤 답하려는 의미",
-                    "inferredIntent":"일정 확인",
-                    "rationale":"일정을 보겠다고 말함",
-                    "intentSimilarityScore":0.91
-                  },
-                  {
-                    "interpretation":"다른 날짜를 제안하려는 의미",
-                    "inferredIntent":"일정 변경",
-                    "rationale":"현재 일정이 어려울 수 있음",
-                    "intentSimilarityScore":0.72
+                    "startWordOrder":0,
+                    "endWordOrder":5,
+                    "candidates":[
+                      {
+                        "interpretation":"일정을 확인한 뒤 답하려는 의미",
+                        "inferredIntent":"일정 확인",
+                        "rationale":"일정을 보겠다고 말함",
+                        "intentSimilarityScore":0.91
+                      },
+                      {
+                        "interpretation":"다른 날짜를 제안하려는 의미",
+                        "inferredIntent":"일정 변경",
+                        "rationale":"현재 일정이 어려울 수 있음",
+                        "intentSimilarityScore":0.72
+                      }
+                    ]
                   }
                 ]}
                 """;

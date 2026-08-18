@@ -84,3 +84,12 @@ openrouter:
     timeout-seconds: ${OPENROUTER_API_TIMEOUT_SECONDS:30}
     site-url: ${OPENROUTER_SITE_URL:}
     app-title: ${OPENROUTER_APP_TITLE:Context STT}
+
+context-analysis:
+  guardrails:
+    max-previous-utterances: ${CONTEXT_ANALYSIS_MAX_PREVIOUS_UTTERANCES:20}
+    max-previous-characters: ${CONTEXT_ANALYSIS_MAX_PREVIOUS_CHARACTERS:12000}
+    rate-limit:
+      capacity: ${CONTEXT_ANALYSIS_RATE_LIMIT_CAPACITY:10}
+      window: ${CONTEXT_ANALYSIS_RATE_LIMIT_WINDOW:1m}
+      maximum-tracked-users: ${CONTEXT_ANALYSIS_RATE_LIMIT_MAXIMUM_TRACKED_USERS:10000}

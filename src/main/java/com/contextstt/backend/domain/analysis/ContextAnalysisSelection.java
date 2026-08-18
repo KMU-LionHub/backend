@@ -1,7 +1,10 @@
 package com.contextstt.backend.domain.analysis;
 
+import com.contextstt.backend.exception.ResourceConflictException;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
+import jakarta.persistence.EnumType;
+import jakarta.persistence.Enumerated;
 import jakarta.persistence.FetchType;
 import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.GenerationType;
@@ -29,17 +32,21 @@ public class ContextAnalysisSelection {
     private Long id;
 
     @OneToOne(fetch = FetchType.LAZY, optional = false)
-    @JoinColumn(name = "analysis_id", nullable = false, unique = true)
-    private ContextAnalysis analysis;
+    @JoinColumn(name = "ambiguity_id", nullable = false, unique = true)
+    private ContextAmbiguity ambiguity;
 
-    @ManyToOne(fetch = FetchType.LAZY, optional = false)
-    @JoinColumn(name = "candidate_id", nullable = false)
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "candidate_id")
     private ContextCandidate candidate;
 
-    @Column(nullable = false, columnDefinition = "LONGTEXT")
+    @Enumerated(EnumType.STRING)
+    @Column(nullable = false, length = 20)
+    private ContextResolutionType resolutionType;
+
+    @Column(columnDefinition = "LONGTEXT")
     private String originalCandidateText;
 
-    @Column(nullable = false, columnDefinition = "LONGTEXT")
+    @Column(columnDefinition = "LONGTEXT")
     private String finalText;
 
     @Column(nullable = false, updatable = false)
@@ -51,10 +58,24 @@ public class ContextAnalysisSelection {
     @Version
     private long version;
 
-    static ContextAnalysisSelection create(ContextAnalysis analysis, ContextCandidate candidate) {
+    static ContextAnalysisSelection create(ContextAmbiguity ambiguity, ContextCandidate candidate) {
         ContextAnalysisSelection selection = new ContextAnalysisSelection();
-        selection.analysis = analysis;
+        selection.ambiguity = ambiguity;
         selection.applyCandidate(candidate);
+        return selection;
+    }
+
+    static ContextAnalysisSelection createCustom(ContextAmbiguity ambiguity, String text) {
+        ContextAnalysisSelection selection = new ContextAnalysisSelection();
+        selection.ambiguity = ambiguity;
+        selection.applyCustom(text);
+        return selection;
+    }
+
+    static ContextAnalysisSelection createDismissed(ContextAmbiguity ambiguity) {
+        ContextAnalysisSelection selection = new ContextAnalysisSelection();
+        selection.ambiguity = ambiguity;
+        selection.applyDismissed();
         return selection;
     }
 
@@ -65,18 +86,51 @@ public class ContextAnalysisSelection {
     }
 
     void edit(String text) {
+        if (resolutionType == ContextResolutionType.DISMISSED) {
+            throw new ResourceConflictException(
+                    "무시 처리한 구간은 문구를 수정할 수 없습니다."
+            );
+        }
         finalText = text;
         updatedAt = LocalDateTime.now();
     }
 
+    void changeToCustom(String text) {
+        applyCustom(text);
+        selectedAt = LocalDateTime.now();
+        updatedAt = selectedAt;
+    }
+
+    void changeToDismissed() {
+        applyDismissed();
+        selectedAt = LocalDateTime.now();
+        updatedAt = selectedAt;
+    }
+
     public boolean isEdited() {
-        return !originalCandidateText.equals(finalText);
+        return resolutionType == ContextResolutionType.CANDIDATE
+                && !originalCandidateText.equals(finalText);
     }
 
     private void applyCandidate(ContextCandidate candidate) {
         this.candidate = candidate;
+        resolutionType = ContextResolutionType.CANDIDATE;
         originalCandidateText = candidate.getInterpretation();
         finalText = candidate.getInterpretation();
+    }
+
+    private void applyCustom(String text) {
+        candidate = null;
+        resolutionType = ContextResolutionType.CUSTOM;
+        originalCandidateText = null;
+        finalText = text;
+    }
+
+    private void applyDismissed() {
+        candidate = null;
+        resolutionType = ContextResolutionType.DISMISSED;
+        originalCandidateText = null;
+        finalText = null;
     }
 
     @PrePersist

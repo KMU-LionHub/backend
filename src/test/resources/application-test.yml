@@ -42,3 +42,8 @@ claude:
 openrouter:
   api:
     enabled: false
+
+context-analysis:
+  guardrails:
+    rate-limit:
+      capacity: 10000

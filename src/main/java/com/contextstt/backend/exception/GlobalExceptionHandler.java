@@ -4,6 +4,7 @@ import jakarta.persistence.EntityNotFoundException;
 import java.time.LocalDateTime;
 import java.util.List;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.http.converter.HttpMessageNotReadableException;
@@ -86,6 +87,16 @@ public class GlobalExceptionHandler {
     public ResponseEntity<ErrorResponse> handleAnalysisProviderUnavailable(AnalysisProviderUnavailableException ex) {
         log.warn("Analysis provider unavailable", ex);
         return errorResponse(HttpStatus.SERVICE_UNAVAILABLE, ex.getMessage());
+    }
+
+    @ExceptionHandler(ContextAnalysisRateLimitExceededException.class)
+    public ResponseEntity<ErrorResponse> handleContextAnalysisRateLimit(
+            ContextAnalysisRateLimitExceededException ex
+    ) {
+        ResponseEntity<ErrorResponse> response = errorResponse(HttpStatus.TOO_MANY_REQUESTS, ex.getMessage());
+        return ResponseEntity.status(HttpStatus.TOO_MANY_REQUESTS)
+                .header(HttpHeaders.RETRY_AFTER, Long.toString(ex.getRetryAfterSeconds()))
+                .body(response.getBody());
     }
 
     @ExceptionHandler(InvalidAnalysisResultException.class)

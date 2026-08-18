@@ -24,6 +24,7 @@ public record ContextCandidateResponse(
             ContextAnalysisSelection selection
     ) {
         boolean selected = selection != null
+                && selection.getCandidate() != null
                 && selection.getCandidate().getId().equals(candidate.getId());
         return ContextCandidateResponse.builder()
                 .id(candidate.getId())

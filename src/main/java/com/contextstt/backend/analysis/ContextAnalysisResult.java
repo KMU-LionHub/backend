@@ -7,12 +7,12 @@ import java.util.List;
 public record ContextAnalysisResult(
         String provider,
         String model,
-        List<GeneratedContextCandidate> candidates
+        List<GeneratedContextAmbiguity> ambiguities
 ) {
 
     public ContextAnalysisResult {
-        candidates = candidates == null
+        ambiguities = ambiguities == null
                 ? null
-                : Collections.unmodifiableList(new ArrayList<>(candidates));
+                : Collections.unmodifiableList(new ArrayList<>(ambiguities));
     }
 }
