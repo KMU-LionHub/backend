@@ -63,3 +63,12 @@ stt:
     location: ${STT_GOOGLE_LOCATION:asia-northeast1}
     model: ${STT_GOOGLE_MODEL:long}
     max-audio-bytes: ${STT_MAX_AUDIO_BYTES:10485760}
+
+claude:
+  api:
+    enabled: ${CLAUDE_API_ENABLED:false}
+    api-key: ${CLAUDE_API_KEY:}
+    base-url: ${CLAUDE_API_BASE_URL:https://api.anthropic.com}
+    model: ${CLAUDE_API_MODEL:claude-sonnet-5}
+    max-tokens: ${CLAUDE_API_MAX_TOKENS:1024}
+    timeout-seconds: ${CLAUDE_API_TIMEOUT_SECONDS:30}
