@@ -14,7 +14,6 @@ import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.security.web.SecurityFilterChain;
 import org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter;
-
 import org.springframework.web.cors.CorsConfiguration;
 import org.springframework.web.cors.CorsConfigurationSource;
 import org.springframework.web.cors.UrlBasedCorsConfigurationSource;
@@ -47,46 +46,40 @@ public class SecurityConfig {
 
         http
                 // CORS 활성화
-                .cors(cors -> {})
+                .cors(cors ->
+                        cors.configurationSource(corsConfigurationSource())
+                )
 
-                // REST API이므로 CSRF 비활성화
                 .csrf(AbstractHttpConfigurer::disable)
-
-                // 기본 로그인 방식 비활성화
                 .httpBasic(AbstractHttpConfigurer::disable)
                 .formLogin(AbstractHttpConfigurer::disable)
 
-                // JWT 사용 -> 세션 사용하지 않음
-                .sessionManagement(
-                        session ->
-                                session.sessionCreationPolicy(
-                                        SessionCreationPolicy.STATELESS
+                .sessionManagement(session ->
+                        session.sessionCreationPolicy(
+                                SessionCreationPolicy.STATELESS
+                        )
+                )
+
+                .exceptionHandling(exception ->
+                        exception
+                                .authenticationEntryPoint(
+                                        apiSecurityExceptionHandler
+                                )
+                                .accessDeniedHandler(
+                                        apiSecurityExceptionHandler
                                 )
                 )
 
-                // 인증/인가 예외 처리
-                .exceptionHandling(
-                        exception ->
-                                exception
-                                        .authenticationEntryPoint(
-                                                apiSecurityExceptionHandler
-                                        )
-                                        .accessDeniedHandler(
-                                                apiSecurityExceptionHandler
-                                        )
-                )
-
-                // URL별 접근 권한
                 .authorizeHttpRequests(auth -> {
 
-                    // 회원가입 / 로그인은 인증 없이 접근 가능
+                    // 회원가입 / 로그인 허용
                     auth.requestMatchers(
                             HttpMethod.POST,
                             "/api/auth/signup",
                             "/api/auth/login"
                     ).permitAll();
 
-                    // Swagger 사용 허용
+                    // Swagger
                     if (openApiProperties.enabled()) {
                         auth.requestMatchers(
                                 "/swagger-ui/**",
@@ -95,17 +88,15 @@ public class SecurityConfig {
                         ).permitAll();
                     }
 
-                    // 나머지는 로그인 필요
+                    // 나머지 요청은 인증 필요
                     auth.anyRequest().authenticated();
                 })
 
-                // JWT 인증 필터
                 .addFilterBefore(
                         jwtAuthenticationFilter,
                         UsernamePasswordAuthenticationFilter.class
                 )
 
-                // 로그인/회원가입 Rate Limit 필터
                 .addFilterBefore(
                         authRateLimitFilter,
                         JwtAuthenticationFilter.class
@@ -124,15 +115,21 @@ public class SecurityConfig {
         CorsConfiguration configuration =
                 new CorsConfiguration();
 
-        // Vite 프론트엔드 주소 허용
+        // Vite 개발 서버 허용
+        // localhost:5173 ~ localhost:5179
         configuration.setAllowedOrigins(
                 List.of(
                         "http://localhost:5173",
-                        "http://localhost:5174"
+                        "http://localhost:5174",
+                        "http://localhost:5175",
+                        "http://localhost:5176",
+                        "http://localhost:5177",
+                        "http://localhost:5178",
+                        "http://localhost:5179"
                 )
         );
 
-        // 프론트에서 사용할 HTTP Method
+        // 허용 HTTP Method
         configuration.setAllowedMethods(
                 List.of(
                         "GET",
@@ -144,23 +141,25 @@ public class SecurityConfig {
                 )
         );
 
-        // Authorization, Content-Type 등 허용
+        // 모든 요청 헤더 허용
         configuration.setAllowedHeaders(
                 List.of("*")
         );
 
-        // 응답에서 Authorization 헤더 접근 허용
+        // Authorization 등의 응답 헤더 접근 허용
         configuration.setExposedHeaders(
                 List.of("Authorization")
         );
 
-        // 인증정보 포함 요청 허용
+        // 쿠키 / 인증정보 허용
         configuration.setAllowCredentials(true);
+
+        // preflight 결과 캐시
+        configuration.setMaxAge(3600L);
 
         UrlBasedCorsConfigurationSource source =
                 new UrlBasedCorsConfigurationSource();
 
-        // 모든 API 경로에 CORS 적용
         source.registerCorsConfiguration(
                 "/**",
                 configuration
@@ -168,6 +167,10 @@ public class SecurityConfig {
 
         return source;
     }
+
+    // ========================================
+    // Password Encoder
+    // ========================================
 
     @Bean
     public PasswordEncoder passwordEncoder() {
