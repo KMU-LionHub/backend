@@ -38,6 +38,8 @@ springdoc:
 app:
   openapi:
     enabled: false
+  cors:
+    allowed-origins: ${CORS_ALLOWED_ORIGINS:}
 
 server:
   port: ${SERVER_PORT:8080}
