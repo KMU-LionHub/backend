@@ -1,5 +1,15 @@
+-- 기존 candidate_count 컬럼에 걸려 있는 CHECK 제약조건을 먼저 제거
+ALTER TABLE context_analyses
+    DROP CHECK ck_context_analyses_candidate_count;
+
+-- candidate_count -> requested_candidate_count 로 이름 변경
 ALTER TABLE context_analyses
     RENAME COLUMN candidate_count TO requested_candidate_count;
+
+-- 이름이 변경된 컬럼에 CHECK 제약조건 다시 생성
+ALTER TABLE context_analyses
+    ADD CONSTRAINT ck_context_analyses_requested_candidate_count
+        CHECK (requested_candidate_count BETWEEN 2 AND 5);
 
 ALTER TABLE context_analyses
     ADD COLUMN ambiguity_count INT NOT NULL DEFAULT 0;
