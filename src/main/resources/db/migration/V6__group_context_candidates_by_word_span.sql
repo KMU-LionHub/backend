@@ -1,5 +1,12 @@
 ALTER TABLE context_analyses
+    DROP CONSTRAINT ck_context_analyses_candidate_count;
+
+ALTER TABLE context_analyses
     RENAME COLUMN candidate_count TO requested_candidate_count;
+
+ALTER TABLE context_analyses
+    ADD CONSTRAINT ck_context_analyses_requested_candidate_count
+        CHECK (requested_candidate_count BETWEEN 2 AND 5);
 
 ALTER TABLE context_analyses
     ADD COLUMN ambiguity_count INT NOT NULL DEFAULT 0;
