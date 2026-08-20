@@ -43,7 +43,7 @@ jobs:
 
   publish-image:
     name: Publish commit image
-    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    if: (github.event_name == 'push' && github.ref == 'refs/heads/main') || github.event_name == 'workflow_dispatch' # TEMP: testing deploy job, revert before merge
     needs: build
     runs-on: ubuntu-latest
     timeout-minutes: 20
@@ -96,7 +96,7 @@ jobs:
 
   deploy:
     name: Deploy via Docker Compose
-    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    if: (github.event_name == 'push' && github.ref == 'refs/heads/main') || github.event_name == 'workflow_dispatch' # TEMP: testing deploy job, revert before merge
     needs: publish-image
     runs-on: self-hosted
     timeout-minutes: 15
