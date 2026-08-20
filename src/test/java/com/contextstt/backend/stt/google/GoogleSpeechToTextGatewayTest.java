@@ -132,6 +132,17 @@ class GoogleSpeechToTextGatewayTest {
                 .hasMessageContaining("roles/speech.client");
     }
 
+    @Test
+    void sanitizesAndBoundsProviderMessagesBeforeLogging() {
+        assertThat(GoogleSpeechToTextGateway.sanitizeProviderMessage(null))
+                .isEqualTo("(no provider message)");
+        assertThat(GoogleSpeechToTextGateway.sanitizeProviderMessage("first\nsecond\r\tthird"))
+                .isEqualTo("first second  third");
+        assertThat(GoogleSpeechToTextGateway.sanitizeProviderMessage("a".repeat(1_001)))
+                .hasSize(1_003)
+                .endsWith("...");
+    }
+
     private ApiException apiException(StatusCode.Code code) {
         ApiException exception = mock(ApiException.class);
         StatusCode statusCode = mock(StatusCode.class);
