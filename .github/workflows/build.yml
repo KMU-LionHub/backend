@@ -126,15 +126,11 @@ jobs:
           ${{ secrets.PROD_ENV_FILE }}
           ENV_EOF
 
-      - name: Pull backend image
-        env:
-          BACKEND_IMAGE_TAG: ${{ github.sha }}
-        run: docker compose -f compose.yaml -f compose.prod.yaml --env-file .env pull backend
-
       - name: Deploy with Docker Compose
         env:
           BACKEND_IMAGE_TAG: ${{ github.sha }}
-        run: docker compose -f compose.yaml -f compose.prod.yaml --env-file .env up -d --remove-orphans
+          ENV_FILE: .env
+        run: scripts/deploy-prod.sh
 
       - name: Remove production .env file
         if: always()

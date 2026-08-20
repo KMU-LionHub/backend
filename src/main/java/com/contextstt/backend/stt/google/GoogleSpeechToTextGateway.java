@@ -35,6 +35,7 @@ public class GoogleSpeechToTextGateway implements SpeechToTextGateway {
     private static final String PROVIDER = "GOOGLE_SPEECH_V2";
 
     private final GoogleSttProperties properties;
+    private final GoogleAdcValidator adcValidator;
     private final Object clientMonitor = new Object();
 
     private volatile SpeechClient speechClient;
@@ -106,6 +107,7 @@ public class GoogleSpeechToTextGateway implements SpeechToTextGateway {
     }
 
     private SpeechClient createClient() {
+        adcValidator.validate();
         try {
             SpeechSettings settings = SpeechSettings.newBuilder()
                     .setEndpoint(properties.apiEndpoint())
@@ -164,15 +166,34 @@ public class GoogleSpeechToTextGateway implements SpeechToTextGateway {
         return Math.max(0L, duration.getSeconds() * 1_000L + duration.getNanos() / 1_000_000L);
     }
 
-    private RuntimeException mapProviderException(ApiException ex) {
+    RuntimeException mapProviderException(ApiException ex) {
         StatusCode.Code code = ex.getStatusCode().getCode();
-        if (code == StatusCode.Code.INVALID_ARGUMENT) {
-            return new InvalidAudioException(
+        return switch (code) {
+            case INVALID_ARGUMENT -> new InvalidAudioException(
                     "지원하지 않는 오디오이거나 60초 제한을 초과했습니다.",
                     ex
             );
-        }
-        return new SpeechProviderUnavailableException("STT 처리 중 일시적인 오류가 발생했습니다.", ex);
+            case UNAUTHENTICATED -> new SpeechProviderUnavailableException(
+                    "Google STT 인증에 실패했습니다. ADC 자격증명을 다시 확인해 주세요.",
+                    ex
+            );
+            case PERMISSION_DENIED -> new SpeechProviderUnavailableException(
+                    "Google STT 접근 권한이 없습니다. Speech-to-Text API 활성화와 roles/speech.client 권한을 확인해 주세요.",
+                    ex
+            );
+            case NOT_FOUND -> new SpeechProviderUnavailableException(
+                    "Google STT 프로젝트, 리전 또는 recognizer 설정을 찾을 수 없습니다.",
+                    ex
+            );
+            case RESOURCE_EXHAUSTED -> new SpeechProviderUnavailableException(
+                    "Google STT 할당량을 초과했습니다. 프로젝트의 quota와 결제 상태를 확인해 주세요.",
+                    ex
+            );
+            default -> new SpeechProviderUnavailableException(
+                    "STT 처리 중 일시적인 오류가 발생했습니다.",
+                    ex
+            );
+        };
     }
 
     @PreDestroy

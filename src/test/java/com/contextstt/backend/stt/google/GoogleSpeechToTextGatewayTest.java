@@ -3,7 +3,12 @@ package com.contextstt.backend.stt.google;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.assertj.core.data.Offset.offset;
+import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.when;
 
+import com.contextstt.backend.exception.SpeechProviderUnavailableException;
+import com.google.api.gax.rpc.ApiException;
+import com.google.api.gax.rpc.StatusCode;
 import com.contextstt.backend.exception.SpeechNotDetectedException;
 import com.contextstt.backend.stt.SpeechRecognitionResult;
 import com.google.cloud.speech.v2.RecognizeResponse;
@@ -88,7 +93,10 @@ class GoogleSpeechToTextGatewayTest {
         properties.setEnabled(true);
         properties.setProjectId("context-stt");
         properties.setModel("long");
-        GoogleSpeechToTextGateway gateway = new GoogleSpeechToTextGateway(properties);
+        GoogleSpeechToTextGateway gateway = new GoogleSpeechToTextGateway(
+                properties,
+                new GoogleAdcValidator(() -> null)
+        );
 
         var request = gateway.createRequest(new byte[]{1, 2, 3}, "ko-KR");
 
@@ -101,6 +109,35 @@ class GoogleSpeechToTextGatewayTest {
         assertThat(request.getConfig().getFeatures().getEnableAutomaticPunctuation()).isTrue();
         assertThat(request.getConfig().getFeatures().getEnableWordTimeOffsets()).isTrue();
         assertThat(request.getConfig().getFeatures().getEnableWordConfidence()).isTrue();
+    }
+
+    @Test
+    void mapsAuthenticationAndPermissionFailuresToActionableMessages() {
+        GoogleSttProperties properties = new GoogleSttProperties();
+        GoogleSpeechToTextGateway gateway = new GoogleSpeechToTextGateway(
+                properties,
+                new GoogleAdcValidator(() -> null)
+        );
+
+        assertThatThrownBy(() -> {
+            throw gateway.mapProviderException(apiException(StatusCode.Code.UNAUTHENTICATED));
+        })
+                .isInstanceOf(SpeechProviderUnavailableException.class)
+                .hasMessageContaining("ADC 자격증명");
+
+        assertThatThrownBy(() -> {
+            throw gateway.mapProviderException(apiException(StatusCode.Code.PERMISSION_DENIED));
+        })
+                .isInstanceOf(SpeechProviderUnavailableException.class)
+                .hasMessageContaining("roles/speech.client");
+    }
+
+    private ApiException apiException(StatusCode.Code code) {
+        ApiException exception = mock(ApiException.class);
+        StatusCode statusCode = mock(StatusCode.class);
+        when(exception.getStatusCode()).thenReturn(statusCode);
+        when(statusCode.getCode()).thenReturn(code);
+        return exception;
     }
 
     private Duration duration(long seconds, int nanos) {
