@@ -25,14 +25,17 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Objects;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Component;
 import org.springframework.util.StringUtils;
 
+@Slf4j
 @Component
 @RequiredArgsConstructor
 public class GoogleSpeechToTextGateway implements SpeechToTextGateway {
 
     private static final String PROVIDER = "GOOGLE_SPEECH_V2";
+    private static final int MAX_PROVIDER_MESSAGE_LOG_LENGTH = 1_000;
 
     private final GoogleSttProperties properties;
     private final GoogleAdcValidator adcValidator;
@@ -47,6 +50,7 @@ public class GoogleSpeechToTextGateway implements SpeechToTextGateway {
         try {
             return mapResponse(client().recognize(createRequest(audio, languageCode)));
         } catch (ApiException ex) {
+            logProviderException(ex, audio.length, languageCode);
             throw mapProviderException(ex);
         }
     }
@@ -194,6 +198,41 @@ public class GoogleSpeechToTextGateway implements SpeechToTextGateway {
                     ex
             );
         };
+    }
+
+    private void logProviderException(ApiException ex, int audioBytes, String languageCode) {
+        StatusCode.Code code = ex.getStatusCode().getCode();
+        log.warn(
+                "Google STT request failed: status={}, retryable={}, location={}, model={}, "
+                        + "languageCode={}, audioBytes={}, providerMessage={}",
+                code,
+                ex.isRetryable(),
+                properties.getLocation().trim(),
+                model(),
+                languageCode,
+                audioBytes,
+                providerMessage(ex)
+        );
+    }
+
+    private static String providerMessage(ApiException ex) {
+        String message = ex.getMessage();
+        if (!StringUtils.hasText(message) && ex.getCause() != null) {
+            message = ex.getCause().getMessage();
+        }
+        return sanitizeProviderMessage(message);
+    }
+
+    static String sanitizeProviderMessage(String message) {
+        if (!StringUtils.hasText(message)) {
+            return "(no provider message)";
+        }
+
+        String sanitized = message.replaceAll("\\p{Cntrl}", " ").trim();
+        if (sanitized.length() <= MAX_PROVIDER_MESSAGE_LOG_LENGTH) {
+            return sanitized;
+        }
+        return sanitized.substring(0, MAX_PROVIDER_MESSAGE_LOG_LENGTH) + "...";
     }
 
     @PreDestroy
