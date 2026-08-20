@@ -1,5 +1,7 @@
 services:
   backend:
+    # File-backed Compose secrets preserve host ownership and permissions.
+    user: "${GOOGLE_ADC_RUNTIME_USER:-spring:spring}"
     environment:
       GOOGLE_APPLICATION_CREDENTIALS: /run/secrets/google_adc
     secrets:
