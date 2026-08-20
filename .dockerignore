@@ -1,6 +1,10 @@
 .git
-.gradle
-.idea
-build
+.github
 .env
+.env.*
+.gradle
+build
+out
+.idea
+.vscode
 *.iml
