@@ -121,7 +121,10 @@ jobs:
           password: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Write production .env file
-        run: echo "${{ secrets.PROD_ENV_FILE }}" > .env
+        run: |
+          cat > .env <<'ENV_EOF'
+          ${{ secrets.PROD_ENV_FILE }}
+          ENV_EOF
 
       - name: Pull backend image
         env:
