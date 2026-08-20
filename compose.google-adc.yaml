@@ -1,0 +1,10 @@
+services:
+  backend:
+    environment:
+      GOOGLE_APPLICATION_CREDENTIALS: /run/secrets/google_adc
+    secrets:
+      - google_adc
+
+secrets:
+  google_adc:
+    file: "${GOOGLE_ADC_PATH:?GOOGLE_ADC_PATH is required when mounting Google ADC}"

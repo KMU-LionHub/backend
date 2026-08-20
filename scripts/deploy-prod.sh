@@ -23,6 +23,15 @@ export BACKEND_IMAGE_TAG
 COMPOSE_ARGUMENTS=(
   -f compose.yaml
   -f compose.prod.yaml
+)
+
+if grep -Eq '^GOOGLE_ADC_PATH=.+$' "${ENV_FILE}"; then
+  COMPOSE_ARGUMENTS+=(
+    -f compose.google-adc.yaml
+  )
+fi
+
+COMPOSE_ARGUMENTS+=(
   --env-file "${ENV_FILE}"
 )
 
