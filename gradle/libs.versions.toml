@@ -1,7 +1,7 @@
 [versions]
-google-cloud-libraries-bom = "26.83.0"
+google-cloud-libraries-bom = "26.86.0"
 jjwt = "0.13.0"
-spring-boot = "4.1.0"
+spring-boot = "4.1.1"
 spring-dependency-management = "1.1.7"
 springdoc = "3.1.0"
 
